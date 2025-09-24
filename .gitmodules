@@ -1,0 +1,3 @@
+[submodule "autoware-pov"]
+	path = autoware-pov
+	url = https://github.com/autowarefoundation/autoware.privately-owned-vehicles.git
