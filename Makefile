@@ -273,4 +273,17 @@ remove-vision-services: ## Remove all VisionPilot systemd services
 	@-ros2 systemd remove vision-pilot-simple 2>/dev/null || true
 	@echo "$(GREEN)VisionPilot services removed$(RESET)"
 
+.PHONY: rviz
+rviz: ## Launch RViz2 for 3D visualization
+	@echo "$(BOLD)Launching RViz2...$(RESET)"
+	@if [ ! -d "$(WORKSPACE_DIR)" ]; then \
+		echo "$(YELLOW)Error: $(WORKSPACE_DIR) not found$(RESET)"; \
+		echo "Please build the workspace first"; \
+		exit 1; \
+	fi
+	@cd $(WORKSPACE_DIR) && \
+	. $(ROS_SETUP) && \
+	. install/setup.sh && \
+	rviz2
+
 .DEFAULT_GOAL := help
