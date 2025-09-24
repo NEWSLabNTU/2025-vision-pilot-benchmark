@@ -1,0 +1,259 @@
+---
+- name: Install VisionPilot Prerequisites on Jetson Linux (Revised)
+  hosts: localhost
+  become: yes
+  vars:
+    project_root: "{{ playbook_dir }}/.."
+    models_dir: "{{ project_root }}/models"
+    scripts_dir: "{{ project_root }}/scripts"
+    gdown_version: "5.2.0"
+
+  tasks:
+    - name: Check system information
+      debug:
+        msg: "Installing VisionPilot prerequisites on Jetson Linux 36.3"
+
+    - name: Check CUDA installation (with full path)
+      shell: |
+        if [ -x /usr/local/cuda/bin/nvcc ]; then
+          /usr/local/cuda/bin/nvcc --version
+        elif command -v nvcc >/dev/null 2>&1; then
+          nvcc --version
+        else
+          exit 1
+        fi
+      register: cuda_check
+      failed_when: false
+      changed_when: false
+      environment:
+        PATH: "/usr/local/cuda/bin:{{ ansible_env.PATH }}"
+
+    - name: Verify CUDA is installed
+      fail:
+        msg: |
+          CUDA is not installed on this Jetson system.
+          For Jetson Linux 36.3, CUDA should be installed via NVIDIA SDK Manager.
+          Expected location: /usr/local/cuda/bin/nvcc
+          Please ensure CUDA is properly installed before running this playbook.
+      when: cuda_check.rc != 0
+
+    - name: Display CUDA version
+      debug:
+        msg: "CUDA found: {{ cuda_check.stdout_lines[3] }}"
+      when: cuda_check.rc == 0
+
+    - name: Create models directory
+      file:
+        path: "{{ models_dir }}"
+        state: directory
+        mode: '0755'
+      become: no
+
+    - name: Create system directories
+      file:
+        path: /etc/apt/preferences.d
+        state: directory
+        mode: '0755'
+
+    - name: Copy APT preferences for OpenCV
+      copy:
+        src: files/opencv-preferences
+        dest: /etc/apt/preferences.d/opencv-preferences
+        mode: '0644'
+        backup: yes
+
+    - name: Update APT cache
+      apt:
+        update_cache: yes
+
+    - name: Install system dependencies
+      apt:
+        name:
+          - libopencv-dev
+          - build-essential
+          - cmake
+          - wget
+          - curl
+          - python3-pip
+          - python3-dev
+          - python3-numpy
+          - unzip
+          - tar
+          - nvidia-tensorrt
+        state: present
+
+    - name: Verify OpenCV version installed
+      shell: dpkg -l | grep libopencv-dev | awk '{print $3}'
+      register: opencv_version
+      changed_when: false
+
+    - name: Display OpenCV version
+      debug:
+        msg: "OpenCV installed version: {{ opencv_version.stdout }}"
+
+    - name: Verify OpenCV is from Ubuntu repository
+      shell: apt show libopencv-dev | grep "APT-Sources"
+      register: opencv_source
+      changed_when: false
+
+    - name: Display OpenCV source
+      debug:
+        msg: "OpenCV source: {{ opencv_source.stdout }}"
+
+    - name: Uninstall any user NumPy to avoid conflicts with system version
+      pip:
+        name: numpy
+        state: absent
+        executable: pip3
+        extra_args: --user
+      become: no
+      failed_when: false
+
+    - name: Install basic Python packages
+      pip:
+        name:
+          - gdown=={{ gdown_version }}
+          - pillow
+          - tqdm
+        state: present
+        executable: pip3
+        extra_args: --user
+      become: no
+
+    - name: Download ONNX Runtime GPU wheel for Jetson (JetPack 6.0)
+      get_url:
+        url: https://nvidia.box.com/shared/static/6l0u97rj80ifwkk8rqbzj1try89fk26z.whl
+        dest: /tmp/onnxruntime_gpu-1.19.0-cp310-cp310-linux_aarch64.whl
+        mode: '0644'
+
+    - name: Install ONNX Runtime GPU dependencies (compatible versions)
+      pip:
+        name:
+          - coloredlogs
+          - flatbuffers
+          - packaging
+          - protobuf
+          - sympy
+        state: present
+        executable: pip3
+        extra_args: --user
+      become: no
+
+    - name: Install ONNX Runtime GPU from downloaded wheel (without dependencies)
+      pip:
+        name: /tmp/onnxruntime_gpu-1.19.0-cp310-cp310-linux_aarch64.whl
+        state: present
+        executable: pip3
+        extra_args: --user --no-deps
+      become: no
+
+
+    - name: Copy models manifest to models directory
+      copy:
+        src: "{{ scripts_dir }}/models_manifest.json"
+        dest: "{{ models_dir }}/models_manifest.json"
+        mode: '0644'
+      become: no
+
+
+    - name: Download required ONNX models
+      shell: |
+        cd {{ project_root }}
+        python3 {{ scripts_dir }}/download_models.py --required-only --format onnx_fp32
+      args:
+        creates: "{{ models_dir }}/SceneSeg_FP32.onnx"
+      become: no
+
+
+    - name: Check TensorRT installation (using full path)
+      command: /usr/src/tensorrt/bin/trtexec --help
+      register: tensorrt_check
+      failed_when: false
+      changed_when: false
+
+    - name: Add TensorRT bin to PATH for model compilation
+      set_fact:
+        tensorrt_path: "/usr/src/tensorrt/bin:{{ ansible_env.PATH }}"
+
+    - name: Ask user about TensorRT compilation
+      pause:
+        prompt: |
+
+          TensorRT compilation can significantly improve inference performance (2-4x speedup)
+          but takes 10-15 minutes to compile all models.
+
+          Compile ONNX models to TensorRT engines? [y/N]
+      register: compile_tensorrt_prompt
+      when: tensorrt_check.rc == 0
+
+    - name: Compile ONNX models to TensorRT engines
+      shell: |
+        cd {{ project_root }}
+        export PATH="{{ tensorrt_path }}"
+        python3 {{ scripts_dir }}/compile_tensorrt_engines.py --precision fp16 --models-dir {{ models_dir }}
+      when:
+        - tensorrt_check.rc == 0
+        - compile_tensorrt_prompt.user_input | lower in ['y', 'yes']
+      register: engine_compilation
+      failed_when: false
+      become: no
+
+    - name: List compiled TensorRT engines
+      shell: ls -lh {{ models_dir }}/*.engine 2>/dev/null | wc -l
+      register: engine_count
+      failed_when: false
+      changed_when: false
+      when:
+        - tensorrt_check.rc == 0
+        - compile_tensorrt_prompt.user_input | lower in ['y', 'yes']
+
+    - name: Display TensorRT compilation result
+      debug:
+        msg: |
+          {% if tensorrt_check.rc != 0 %}
+          TensorRT not available - ONNX models will run with ONNX Runtime
+          {% elif compile_tensorrt_prompt.user_input | lower not in ['y', 'yes'] %}
+          TensorRT compilation skipped by user - ONNX models will run with ONNX Runtime
+          To compile later: make compile-tensorrt
+          {% elif engine_compilation.rc == 0 %}
+          TensorRT engines compiled successfully ({{ engine_count.stdout | default(0) }} engines created)
+          {% else %}
+          TensorRT engine compilation failed - models will fallback to ONNX Runtime
+          Error output: {{ engine_compilation.stderr | default('Unknown error') }}
+          {% endif %}
+
+    - name: Verify installations
+      shell: |
+        echo "=== Installation Summary ==="
+        echo "CUDA Version: $(/usr/local/cuda/bin/nvcc --version | grep release | cut -d' ' -f5,6)"
+        echo "OpenCV Version: $(dpkg -l | grep libopencv-dev | awk '{print $3}')"
+        echo "OpenCV Source: $(apt show libopencv-dev 2>/dev/null | grep 'APT-Sources' | head -1)"
+        echo "ONNX Runtime GPU: $(python3 -c 'import onnxruntime; print(onnxruntime.get_available_providers())' 2>/dev/null || echo 'Not available')"
+        echo "gdown version: $(python3 -c 'import gdown; print(gdown.__version__)' 2>/dev/null || echo 'Not available')"
+        echo "Models Directory: {{ models_dir }}"
+        echo ""
+        echo "Downloaded Models:"
+        ls -lah {{ models_dir }}/*.onnx 2>/dev/null | wc -l | xargs echo "ONNX models:"
+        ls -lah {{ models_dir }}/*.engine 2>/dev/null | wc -l | xargs echo "TensorRT engines:" || echo "TensorRT engines: 0"
+        echo ""
+        echo "Available Commands:"
+        echo "  python3 scripts/download_models.py --help"
+        echo "  python3 scripts/compile_tensorrt_engines.py --help"
+      register: verify_output
+      changed_when: false
+
+    - name: Display verification results
+      debug:
+        msg: "{{ verify_output.stdout_lines }}"
+
+    - name: Final instructions
+      debug:
+        msg:
+          - "Prerequisites installation complete!"
+          - "Models directory: {{ models_dir }}"
+          - "Scripts directory: {{ scripts_dir }}"
+          - ""
+          - "To use VisionPilot:"
+          - "  cd {{ project_root }}"
+          - "  python3 scripts/download_models.py --help          # See model download options"
+          - "  python3 scripts/compile_tensorrt_engines.py --help # See TensorRT compilation options"

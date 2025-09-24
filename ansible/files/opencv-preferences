@@ -1,0 +1,15 @@
+# Prefer Ubuntu repository OpenCV 4.5.4 packages over NVIDIA 4.8.0
+# This prevents dependency conflicts in VisionPilot by prioritizing
+# packages from Ubuntu repositories over NVIDIA repositories
+
+Package: libopencv*
+Pin: origin "Ubuntu"
+Pin-Priority: 1001
+
+Package: opencv-data
+Pin: origin "Ubuntu"
+Pin-Priority: 1001
+
+Package: python3-opencv
+Pin: origin "Ubuntu"
+Pin-Priority: 1001

@@ -1,0 +1,63 @@
+---
+- name: Compile ONNX models to TensorRT engines
+  hosts: localhost
+  become: yes
+  vars:
+    project_root: "{{ playbook_dir }}/.."
+    models_dir: "{{ project_root }}/models"
+    scripts_dir: "{{ project_root }}/scripts"
+
+  tasks:
+    - name: Check if TensorRT is available
+      command: trtexec --help
+      register: tensorrt_check
+      failed_when: false
+      changed_when: false
+
+    - name: Skip TensorRT compilation if not available
+      meta: end_play
+      when: tensorrt_check.rc != 0
+
+    - name: Display TensorRT availability
+      debug:
+        msg: "TensorRT detected - proceeding with engine compilation"
+
+
+    - name: Check available ONNX models
+      find:
+        paths: "{{ models_dir }}"
+        patterns: "*.onnx"
+      register: onnx_models
+
+    - name: Display available models
+      debug:
+        msg: "Found {{ onnx_models.files | length }} ONNX models to compile"
+
+    - name: Compile ONNX models to TensorRT engines (FP16)
+      command: "python3 {{ scripts_dir }}/compile_tensorrt_engines.py --precision fp16 --models-dir {{ models_dir }}"
+      register: compilation_result
+      failed_when: false
+      become: no
+
+    - name: Display compilation results
+      debug:
+        msg: "{{ compilation_result.stdout_lines }}"
+
+    - name: Check compiled engines
+      find:
+        paths: "{{ models_dir }}"
+        patterns: "*.engine"
+      register: engine_files
+
+    - name: Display engine summary
+      debug:
+        msg: |
+          TensorRT compilation summary:
+          - ONNX models: {{ onnx_models.files | length }}
+          - Compiled engines: {{ engine_files.files | length }}
+          {% if engine_files.files | length > 0 %}
+          Engine files:
+          {% for engine in engine_files.files %}
+          - {{ engine.path | basename }}
+          {% endfor %}
+          {% endif %}

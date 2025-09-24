@@ -1,0 +1,42 @@
+{
+  "manifest_version": "1.0",
+  "description": "VisionPilot AI Models from Autoware.foundation",
+  "models": [
+    {
+      "name": "SceneSeg_FP32.onnx",
+      "description": "Scene Segmentation ONNX FP32 Model - Binary foreground/background separation",
+      "file_id": "1l-dniunvYyFKvLD7k16Png3AsVTuMl9f",
+      "size_mb": 185,
+      "required": true,
+      "category": "segmentation",
+      "format": "onnx_fp32"
+    },
+    {
+      "name": "Scene3D_FP32.onnx",
+      "description": "Scene 3D ONNX FP32 Model - Monocular depth estimation",
+      "file_id": "19gMPt_1z4eujo4jm5XKuH-8eafh-wJC6",
+      "size_mb": 185,
+      "required": true,
+      "category": "depth",
+      "format": "onnx_fp32"
+    },
+    {
+      "name": "DomainSeg_FP32.onnx",
+      "description": "Domain Segmentation ONNX FP32 Model - Road/off-road classification",
+      "file_id": "1zCworKw4aQ9_hDBkHfj1-sXitAAebl5Y",
+      "size_mb": 185,
+      "required": true,
+      "category": "segmentation",
+      "format": "onnx_fp32"
+    },
+    {
+      "name": "SceneSeg_INT8.onnx",
+      "description": "Scene Segmentation INT8 Optimized Model - Quantized for faster inference",
+      "file_id": "1yAIsUukWKBsbIvoKVAabwwKPmSXRy24D",
+      "size_mb": 50,
+      "required": false,
+      "category": "segmentation",
+      "format": "onnx_int8"
+    }
+  ]
+}

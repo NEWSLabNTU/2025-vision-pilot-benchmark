@@ -1,0 +1,47 @@
+---
+- name: Download VisionPilot models using standalone script
+  hosts: localhost
+  become: yes
+  vars:
+    project_root: "{{ playbook_dir }}/.."
+    models_dir: "{{ project_root }}/models"
+    scripts_dir: "{{ project_root }}/scripts"
+
+  tasks:
+    - name: Ensure models directory exists
+      file:
+        path: "{{ models_dir }}"
+        state: directory
+        mode: '0755'
+
+
+    - name: Copy models manifest
+      copy:
+        src: ../scripts/models_manifest.json
+        dest: "{{ models_dir }}/models_manifest.json"
+        mode: '0644'
+
+    - name: Download all required models
+      shell: |
+        cd {{ project_root }}
+        export VISIONPILOT_MODELS_DIR="{{ models_dir }}"
+        python3 {{ scripts_dir }}/download_models.py --required-only
+      register: download_result
+      become: no
+
+    - name: Display download results
+      debug:
+        msg: "{{ download_result.stdout_lines }}"
+
+    - name: Generate master checksum file
+      shell: |
+        cd {{ models_dir }}
+        if ls *.sha256 >/dev/null 2>&1; then
+          echo "# VisionPilot Models SHA256 Checksums" > master_checksums.sha256
+          echo "# Generated on $(date)" >> master_checksums.sha256
+          echo "" >> master_checksums.sha256
+          cat *.sha256 >> master_checksums.sha256
+          echo "Master checksum file created: master_checksums.sha256"
+        fi
+      args:
+        creates: "{{ models_dir }}/master_checksums.sha256"

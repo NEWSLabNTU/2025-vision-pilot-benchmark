@@ -1,0 +1,25 @@
+---
+# Master playbook to install and validate VisionPilot prerequisites (Revised)
+
+- name: Install VisionPilot Prerequisites (Revised)
+  import_playbook: install_prerequisites.yml
+  tags:
+    - install
+    - prerequisites
+
+- name: Download Models using standalone script
+  import_playbook: models_download.yml
+  tags:
+    - models
+    - download
+
+- name: Compile TensorRT Engines
+  import_playbook: compile_tensorrt.yml
+  tags:
+    - tensorrt
+    - compile
+
+- name: Validate Installation
+  import_playbook: validate_installation.yml
+  tags:
+    - validate

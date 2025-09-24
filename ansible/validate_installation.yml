@@ -1,0 +1,155 @@
+---
+- name: Validate VisionPilot Prerequisites Installation
+  hosts: localhost
+  become: no
+  vars:
+    expected_opencv_version: "4.5.4"
+    expected_cuda_major: "12"
+    project_root: "{{ playbook_dir }}/.."
+    models_dir: "{{ project_root }}/models"
+    onnxruntime_gpu_version: "1.19.2"
+
+  tasks:
+    - name: Check CUDA installation
+      shell: /usr/local/cuda/bin/nvcc --version | grep release | awk '{print $6}' | sed 's/V//' | cut -d'.' -f1
+      register: cuda_major
+      changed_when: false
+      failed_when: false
+
+    - name: Validate CUDA version
+      assert:
+        that:
+          - cuda_major.rc == 0
+          - cuda_major.stdout == expected_cuda_major
+        fail_msg: "CUDA {{ expected_cuda_major }}.x required, found {{ cuda_major.stdout | default('none') }}"
+        success_msg: "✓ CUDA {{ cuda_major.stdout }}.x detected"
+
+    - name: Check OpenCV installation
+      shell: dpkg -l | grep libopencv-dev | awk '{print $3}' | cut -d'+' -f1
+      register: opencv_version
+      changed_when: false
+      failed_when: false
+
+    - name: Validate OpenCV version
+      assert:
+        that:
+          - opencv_version.stdout is version(expected_opencv_version, '>=')
+          - opencv_version.stdout is version('4.6.0', '<')
+        fail_msg: "OpenCV 4.5.4 required (not 4.8.0), found {{ opencv_version.stdout | default('none') }}"
+        success_msg: "✓ OpenCV {{ opencv_version.stdout }} installed correctly"
+
+    - name: Check ONNX Runtime GPU installation
+      shell: |
+        python3 -c "
+        try:
+            import onnxruntime as ort
+            providers = ort.get_available_providers()
+            version = ort.__version__
+            has_cuda = 'CUDAExecutionProvider' in providers
+            print(f'version:{version},cuda:{has_cuda}')
+        except ImportError:
+            print('error:not_installed')
+        "
+      register: onnx_check
+      changed_when: false
+      failed_when: false
+
+    - name: Validate ONNX Runtime GPU
+      assert:
+        that:
+          - onnx_check.rc == 0
+          - "'error:' not in onnx_check.stdout"
+          - "'cuda:True' in onnx_check.stdout"
+        fail_msg: "ONNX Runtime GPU not properly installed: {{ onnx_check.stdout }}"
+        success_msg: "✓ ONNX Runtime GPU found with CUDA support"
+
+    - name: Check gdown installation
+      shell: |
+        python3 -c "
+        try:
+            import gdown
+            print(f'version:{gdown.__version__}')
+        except ImportError:
+            print('error:not_installed')
+        "
+      register: gdown_check
+      changed_when: false
+      failed_when: false
+
+    - name: Validate gdown installation
+      assert:
+        that:
+          - gdown_check.rc == 0
+          - "'error:' not in gdown_check.stdout"
+          - "'version:5.2.0' in gdown_check.stdout"
+        fail_msg: "gdown 5.2.0 not installed: {{ gdown_check.stdout }}"
+        success_msg: "✓ gdown 5.2.0 found"
+
+    - name: Check for required models
+      stat:
+        path: "{{ models_dir }}/{{ item }}"
+      register: model_files
+      loop:
+        - SceneSeg_FP32.onnx
+        - Scene3D_FP32.onnx
+        - DomainSeg_FP32.onnx
+
+    - name: Validate models presence
+      assert:
+        that:
+          - item.stat.exists
+          - item.stat.size > 100000000  # Models should be >100MB
+        fail_msg: "Model {{ item.item }} not found or too small"
+        success_msg: "✓ Model {{ item.item }} found ({{ (item.stat.size / 1024 / 1024) | round(2) }} MB)"
+      loop: "{{ model_files.results }}"
+
+
+    - name: Test TensorRT availability (optional)
+      shell: |
+        if command -v trtexec >/dev/null 2>&1; then
+            echo "TensorRT available: $(trtexec --help 2>&1 | head -1)"
+            ls {{ models_dir }}/*.engine 2>/dev/null | wc -l | xargs echo "TensorRT engines:"
+        else
+            echo "TensorRT not available"
+        fi
+      register: tensorrt_check
+      changed_when: false
+      failed_when: false
+
+    - name: Generate validation report
+      set_fact:
+        validation_report: |
+          ====================================
+          VisionPilot Installation Validation
+          ====================================
+
+          System Checks:
+          ✓ CUDA {{ cuda_major.stdout }}.x detected
+          ✓ OpenCV {{ opencv_version.stdout }} installed (Ubuntu repo version)
+          ✓ ONNX Runtime GPU {{ onnx_check.stdout.split(',')[0].split(':')[1] }} with CUDA support
+          ✓ gdown {{ gdown_check.stdout.split(':')[1] }} installed
+
+          Models Status:
+          {% for model in model_files.results %}
+          ✓ {{ model.item }}: {{ (model.stat.size / 1024 / 1024) | round(2) }} MB
+          {% endfor %}
+
+          Environment:
+          ✓ All dependencies configured locally
+
+          TensorRT Status:
+          {{ tensorrt_check.stdout }}
+
+          ====================================
+          All prerequisites successfully installed!
+          ====================================
+
+    - name: Display validation report
+      debug:
+        msg: "{{ validation_report.split('\n') }}"
+
+    - name: Save validation report
+      copy:
+        content: "{{ validation_report }}"
+        dest: "{{ project_root }}/validation_report.txt"
+        mode: '0644'
