@@ -9,8 +9,8 @@ WORKSPACE_DIR := autoware-pov/VisionPilot/ROS2
 MODELS_DIR := models
 
 # Build configuration
-PACKAGES := sensors models visualization
 BUILD_TYPE := Release
+ONNXRUNTIME_ROOTDIR := $(shell pwd)/onnxruntime
 
 # Colors for output
 RESET := \033[0m
@@ -82,11 +82,15 @@ build: ## Build ROS2 packages
 		echo "Please clone the VisionPilot repository first"; \
 		exit 1; \
 	fi
+
 	@cd $(WORKSPACE_DIR) && \
-		. $(ROS_SETUP) && \
-		colcon build --packages-select $(PACKAGES) \
-			--cmake-args \
-			-DCMAKE_BUILD_TYPE=$(BUILD_TYPE)
+	. $(ROS_SETUP) && \
+	colcon build \
+		--symlink-install \
+		--cmake-args \
+		-DCMAKE_BUILD_TYPE=$(BUILD_TYPE) \
+		-DONNXRUNTIME_ROOTDIR=$(ONNXRUNTIME_ROOTDIR)
+
 	@echo "$(GREEN)Build complete$(RESET)"
 	@echo "Source the workspace: cd $(WORKSPACE_DIR) && source install/setup.sh"
 
@@ -130,7 +134,7 @@ test: ## Run basic tests
 	@echo "3. Checking ROS2 packages..."
 	@if [ -d "$(WORKSPACE_DIR)/install" ]; then \
 		cd $(WORKSPACE_DIR) && \
-		bash -c ". $(ROS_SETUP) && . install/setup.sh && ros2 pkg list | grep -E '(sensors|models|visualization)'" || echo "Packages not built"; \
+		. $(ROS_SETUP) && . install/setup.sh && ros2 pkg list | grep -E '(sensors|models|visualization)' || echo "Packages not built"; \
 	else \
 		echo "Packages not built"; \
 	fi
@@ -173,7 +177,6 @@ run-scene-seg: ## Run scene segmentation pipeline (requires video path)
 		. $(ROS_SETUP) && \
 		. install/setup.sh && \
 		ros2 launch models run_pipeline.launch.py pipeline:=scene_seg video_path:=$(VIDEO)
-
 .PHONY: run-depth
 run-depth: ## Run depth estimation pipeline (requires video path)
 	@if [ -z "$(VIDEO)" ]; then \
