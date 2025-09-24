@@ -54,6 +54,26 @@ install-ansible: ## Install Ansible if not present
 		echo "Ansible already installed"; \
 	fi
 
+.PHONY: prepare
+prepare: ## Install ROS2 dependencies with rosdep
+	@echo "$(BOLD)Preparing ROS2 workspace dependencies...$(RESET)"
+	@if [ ! -d "$(WORKSPACE_DIR)" ]; then \
+		echo "$(YELLOW)Error: $(WORKSPACE_DIR) not found$(RESET)"; \
+		echo "Please clone the VisionPilot repository first"; \
+		exit 1; \
+	fi
+
+	@echo "Updating rosdep..."
+	@. $(ROS_SETUP) && \
+	rosdep update
+
+	@echo "Installing dependencies..."
+	@cd $(WORKSPACE_DIR) && \
+	. $(ROS_SETUP) && \
+	rosdep install --from-paths . --ignore-src -r -y
+
+	@echo "$(GREEN)ROS2 dependencies installed$(RESET)"
+
 .PHONY: build
 build: ## Build ROS2 packages
 	@echo "$(BOLD)Building VisionPilot ROS2 packages...$(RESET)"
