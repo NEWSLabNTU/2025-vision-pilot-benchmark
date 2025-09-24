@@ -45,6 +45,62 @@ The automated system uses Ansible playbooks (located in the `ansible/` directory
    - Verifies model downloads
    - Tests basic functionality
 
+## Test Videos and Datasets
+
+VisionPilot works best with highway or street driving videos. Since the Autoware POV Working Group does not provide specific test videos, you can obtain suitable test footage from these sources:
+
+### Free Stock Video Platforms
+
+**Dashcam and Driving Videos:**
+- **Pixabay**: https://pixabay.com/videos/search/dashcam/
+  - Free dashcam videos, royalty-free, no attribution required
+- **Pexels**: https://www.pexels.com/search/videos/dash%20cam/
+  - 1,454+ free dash cam videos in 4K/HD
+- **Videvo**: https://www.videvo.net/stock-video-footage/dashcam/
+  - 428+ free dashcam videos in 4K/HD
+- **POV Driving**: https://pixabay.com/videos/search/pov%20driving/
+  - Point-of-view driving videos
+
+### Academic Datasets (Research-Quality)
+
+**Automotive Computer Vision Datasets:**
+- **KITTI Dataset**: http://www.cvlibs.net/datasets/kitti/
+  - Industry standard: 6 hours of highway/urban traffic scenarios
+  - High-resolution RGB, stereo cameras, 3D laser scanner
+  - Karlsruhe city, rural areas, and highways
+- **BDD100K**: https://bair.berkeley.edu/blog/2018/05/30/bdd/
+  - 100,000 videos, 40 seconds each, 720p at 30fps
+  - Diverse US locations with GPS/IMU data
+- **TU-DAT Dataset**: https://github.com/pavana27/TU-DAT
+  - 280 real-world and simulated traffic videos
+  - Traffic CCTV footage and BeamNG.drive simulations
+- **Carolinas Highway Dataset (CHD)**:
+  - 1.6 million frames, highway-based videos
+  - 338,000 vehicle trajectories across Carolina highways
+
+### Video Requirements
+
+For optimal VisionPilot performance, use videos with:
+- **Content**: Highway/street driving, clear road lanes and traffic
+- **Quality**: 720p or higher resolution
+- **Duration**: 30 seconds to 5 minutes recommended
+- **Lighting**: Good visibility conditions
+- **Format**: MP4 (H.264), AVI, MOV, or MKV
+
+### Usage Example
+
+```bash
+# Download a test video (save to test_videos/ directory)
+make download-test-video
+
+# Run VisionPilot with your video
+make run-web-service VIDEO=/path/to/your/video.mp4 PIPELINE=scene_seg
+
+# Access web interface
+# - Foxglove: https://app.foxglove.dev/ (connect to ws://ROBOT_IP:8765)
+# - Video streams: http://ROBOT_IP:8080
+```
+
 ## Available Commands
 
 | Command | Description |
