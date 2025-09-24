@@ -1,0 +1,9 @@
+# editor
+*~
+.*~
+*.sw[op]
+\#*#
+
+# Python
+*.py[oc]
+__pycache__/
