@@ -103,31 +103,94 @@ make run-web-service VIDEO=/path/to/your/video.mp4 PIPELINE=scene_seg
 
 ## Available Commands
 
+### Setup and Build
 | Command | Description |
 |---------|-------------|
 | `make help` | Show available targets |
 | `make setup` | Install prerequisites using Ansible |
 | `make build` | Build ROS2 packages |
 | `make clean` | Remove build artifacts |
-| `make rebuild` | Clean and rebuild |
 | `make validate` | Validate installation |
 | `make test` | Run basic tests |
 | `make check-deps` | Check dependencies |
+
+### Model Management
+| Command | Description |
+|---------|-------------|
 | `make download-models` | Download AI models only |
 | `make compile-tensorrt` | Compile TensorRT engines |
+| `make tensorrt-engines` | Alias for compile-tensorrt |
+
+### Pipeline Execution
+| Command | Description |
+|---------|-------------|
+| `make run-scene-seg VIDEO=/path/to/video.mp4` | Run scene segmentation pipeline |
+| `make run-depth VIDEO=/path/to/video.mp4` | Run depth estimation pipeline |
+| `make run-web-service VIDEO=/path/to/video.mp4 PIPELINE=scene_seg` | Run web service with systemd |
+| `make run-simple-service VIDEO=/path/to/video.mp4 PIPELINE=scene_seg` | Run simple service with systemd |
+
+### Service Management
+| Command | Description |
+|---------|-------------|
+| `make stop-vision-services` | Stop all VisionPilot systemd services |
+| `make status-vision-services` | Show status of VisionPilot systemd services |
+| `make logs-vision-services SERVICE=vision-pilot-web` | Show logs for specific service |
+| `make remove-vision-services` | Remove all VisionPilot systemd services |
+
+### Visualization
+| Command | Description |
+|---------|-------------|
+| `make rviz` | Launch RViz2 for 3D visualization |
 
 ## Running VisionPilot
 
+### Web Service with Systemd (Recommended)
+```bash
+# Start web service with full interface
+make run-web-service VIDEO=$PWD/test_videos/your-video.mp4 PIPELINE=scene_seg
+
+# Start simple service
+make run-simple-service VIDEO=$PWD/test_videos/your-video.mp4 PIPELINE=scene_seg
+
+# Check service status
+make status-vision-services
+
+# View service logs
+make logs-vision-services SERVICE=vision-pilot-web
+
+# Stop all services
+make stop-vision-services
+```
+
+### Direct Pipeline Execution
 ```bash
 # Scene segmentation pipeline
-make run-scene-seg VIDEO=/path/to/video.mp4
+make run-scene-seg VIDEO=$PWD/test_videos/your-video.mp4
 
 # Depth estimation pipeline
-make run-depth VIDEO=/path/to/video.mp4
-
-# List active topics
-make list-topics
+make run-depth VIDEO=$PWD/test_videos/your-video.mp4
 ```
+
+### Performance Monitoring
+```bash
+# Start performance monitoring in tmux
+./scripts/monitor_performance.sh
+```
+
+This creates a tmux session with:
+- **jtop**: System performance monitoring (GPU, CPU, memory, power)
+- **ROS2 topic hz**: Real-time topic frequency monitoring
+- **journalctl**: Live service logs
+
+**Tmux Controls:**
+- Switch panes: `Ctrl+b` + arrow keys
+- Detach: `Ctrl+b` + `d`
+- Kill session: `tmux kill-session -t visionpilot-monitor`
+
+### Web Access
+After starting the web service:
+- **Foxglove Studio**: https://app.foxglove.dev/ (connect to `ws://ROBOT_IP:8765`)
+- **Video Streams**: http://ROBOT_IP:8080
 
 ## File Structure
 
