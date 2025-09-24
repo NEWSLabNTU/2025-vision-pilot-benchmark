@@ -1,0 +1,85 @@
+---
+# Ansible task to setup ONNX Runtime capi_dir symlink
+# This updates the placeholder symlink to point to the actual Python installation
+
+- name: Setup ONNX Runtime capi_dir symlink
+  hosts: localhost
+  connection: local
+  become: no
+  gather_facts: yes
+
+  vars:
+    project_root: "{{ playbook_dir | dirname }}"
+    onnxruntime_dir: "{{ project_root }}/onnxruntime"
+
+  tasks:
+    - name: Find Python site-packages directory
+      command: python3 -c "import site; print(site.getusersitepackages())"
+      register: python_site_packages
+      changed_when: false
+
+    - name: Set ONNX Runtime capi path
+      set_fact:
+        onnxruntime_capi_path: "{{ python_site_packages.stdout }}/onnxruntime/capi"
+
+    - name: Check if ONNX Runtime is installed via pip
+      stat:
+        path: "{{ onnxruntime_capi_path }}"
+      register: onnxruntime_capi_stat
+
+    - name: Fail if ONNX Runtime is not installed
+      fail:
+        msg: "ONNX Runtime not found at {{ onnxruntime_capi_path }}. Please install onnxruntime-gpu via pip."
+      when: not onnxruntime_capi_stat.stat.exists
+
+    - name: Check ONNX Runtime version matches expected
+      shell: python3 -c "import onnxruntime as ort; print(ort.__version__)"
+      register: onnxruntime_version
+      changed_when: false
+
+    - name: Display ONNX Runtime version
+      debug:
+        msg: "Found ONNX Runtime version: {{ onnxruntime_version.stdout }}"
+
+    - name: Remove existing capi_dir symlink
+      file:
+        path: "{{ onnxruntime_dir }}/capi_dir"
+        state: absent
+
+    - name: Create capi_dir symlink to actual Python installation
+      file:
+        src: "{{ onnxruntime_capi_path }}"
+        dest: "{{ onnxruntime_dir }}/capi_dir"
+        state: link
+      register: symlink_result
+
+    - name: Verify symlink creation
+      stat:
+        path: "{{ onnxruntime_dir }}/capi_dir"
+      register: symlink_stat
+
+    - name: Test symlink by listing files
+      shell: ls -la "{{ onnxruntime_dir }}/capi_dir/"
+      register: symlink_contents
+      changed_when: false
+
+    - name: Display symlink verification
+      debug:
+        msg:
+          - "Symlink created: {{ symlink_stat.stat.exists }}"
+          - "Points to: {{ symlink_stat.stat.lnk_target | default('N/A') }}"
+          - "Contents preview: {{ symlink_contents.stdout_lines[:3] | default([]) }}"
+
+    - name: Test library access through relative symlinks
+      stat:
+        path: "{{ onnxruntime_dir }}/lib/libonnxruntime.so"
+      register: lib_stat
+
+    - name: Verify library symlinks work
+      debug:
+        msg: "Library symlinks working: {{ lib_stat.stat.exists }}"
+      when: lib_stat.stat.exists
+
+    - name: Display success message
+      debug:
+        msg: "ONNX Runtime capi_dir symlink successfully configured!"

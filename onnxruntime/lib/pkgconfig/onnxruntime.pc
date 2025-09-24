@@ -1,0 +1,10 @@
+prefix=/home/jetson/vision-pilot/onnxruntime
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include
+
+Name: ONNX Runtime
+Description: ONNX Runtime C++ API (using pip-installed libraries)
+Version: 1.19.0
+Libs: -L${libdir} -lonnxruntime
+Cflags: -I${includedir} -I${includedir}/onnxruntime/core/session
