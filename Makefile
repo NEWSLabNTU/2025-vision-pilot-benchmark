@@ -177,6 +177,7 @@ run-scene-seg: ## Run scene segmentation pipeline (requires video path)
 		. $(ROS_SETUP) && \
 		. install/setup.sh && \
 		ros2 launch models run_pipeline.launch.py pipeline:=scene_seg video_path:=$(VIDEO)
+
 .PHONY: run-depth
 run-depth: ## Run depth estimation pipeline (requires video path)
 	@if [ -z "$(VIDEO)" ]; then \
@@ -188,11 +189,88 @@ run-depth: ## Run depth estimation pipeline (requires video path)
 		. install/setup.sh && \
 		ros2 launch models run_pipeline.launch.py pipeline:=scene_3d video_path:=$(VIDEO)
 
-.PHONY: list-topics
-list-topics: ## List ROS2 topics
+.PHONY: run-web-service
+run-web-service: ## Run VisionPilot web service with systemd (requires VIDEO and PIPELINE)
+	@if [ -z "$(VIDEO)" ]; then \
+		echo "$(YELLOW)Usage: make run-web-service VIDEO=/path/to/video.mp4 PIPELINE=scene_seg$(RESET)"; \
+		exit 1; \
+	fi
+	@echo "$(BOLD)Starting VisionPilot web service with systemd...$(RESET)"
 	@cd $(WORKSPACE_DIR) && \
-		. $(ROS_SETUP) && \
-		. install/setup.sh 2>/dev/null && \
-		ros2 topic list | grep -E "(autoseg|auto3d|sensors)" || echo "No topics found"
+	. $(ROS_SETUP) && \
+	. install/setup.sh && \
+	ros2 systemd launch \
+		--name vision-pilot-web \
+		--replace \
+		--description "VisionPilot Web Interface Service" \
+		--source $(WORKSPACE_DIR)/install/setup.sh \
+		vision_pilot_launch vision_pilot_web.launch.xml \
+		video_path:=$(VIDEO) \
+		pipeline:=$(or $(PIPELINE),scene_seg)
+	@echo "$(GREEN)VisionPilot web service started!$(RESET)"
+	@echo "Access via:"
+	@echo "  - Foxglove: https://app.foxglove.dev/ (connect to ws://$(shell hostname -I | awk '{print $$1}'):8765)"
+	@echo "  - Video streams: http://$(shell hostname -I | awk '{print $$1}'):8080"
+
+.PHONY: run-simple-service
+run-simple-service: ## Run simple VisionPilot service with systemd (requires VIDEO and PIPELINE)
+	@if [ -z "$(VIDEO)" ]; then \
+		echo "$(YELLOW)Usage: make run-simple-service VIDEO=/path/to/video.mp4 PIPELINE=scene_seg$(RESET)"; \
+		exit 1; \
+	fi
+	@echo "$(BOLD)Starting simple VisionPilot service with systemd...$(RESET)"
+	@cd $(WORKSPACE_DIR) && \
+	. $(ROS_SETUP) && \
+	. install/setup.sh && \
+	ros2 systemd launch \
+		--name vision-pilot-simple \
+		--replace \
+		--description "VisionPilot Simple Service" \
+		--source $(WORKSPACE_DIR)/install/setup.sh \
+		vision_pilot_launch vision_pilot_simple.launch.xml \
+		video_path:=$(VIDEO) \
+		pipeline:=$(or $(PIPELINE),scene_seg)
+	@echo "$(GREEN)VisionPilot simple service started!$(RESET)"
+	@echo "Access via:"
+	@echo "  - Foxglove: https://app.foxglove.dev/ (connect to ws://$(shell hostname -I | awk '{print $$1}'):8765)"
+	@echo "  - Video streams: http://$(shell hostname -I | awk '{print $$1}'):8080"
+
+.PHONY: stop-vision-services
+stop-vision-services: ## Stop all VisionPilot systemd services
+	@echo "$(BOLD)Stopping VisionPilot services...$(RESET)"
+	@-ros2 systemd stop vision-pilot-web 2>/dev/null || true
+	@-ros2 systemd stop vision-pilot-simple 2>/dev/null || true
+	@echo "$(GREEN)VisionPilot services stopped$(RESET)"
+
+.PHONY: status-vision-services
+status-vision-services: ## Show status of VisionPilot systemd services
+	@echo "$(BOLD)VisionPilot services status:$(RESET)"
+	@echo ""
+	@echo "$(YELLOW)Web service:$(RESET)"
+	@-ros2 systemd status vision-pilot-web 2>/dev/null || echo "  Not running"
+	@echo ""
+	@echo "$(YELLOW)Simple service:$(RESET)"
+	@-ros2 systemd status vision-pilot-simple 2>/dev/null || echo "  Not running"
+	@echo ""
+	@echo "$(YELLOW)All ROS2 systemd services:$(RESET)"
+	@-ros2 systemd list 2>/dev/null || echo "  None found"
+
+.PHONY: logs-vision-services
+logs-vision-services: ## Show logs for VisionPilot systemd services
+	@echo "$(BOLD)VisionPilot service logs:$(RESET)"
+	@echo ""
+	@if [ "$(SERVICE)" ]; then \
+		ros2 systemd logs $(SERVICE); \
+	else \
+		echo "$(YELLOW)Usage: make logs-vision-services SERVICE=vision-pilot-web$(RESET)"; \
+		echo "Available services: vision-pilot-web, vision-pilot-simple"; \
+	fi
+
+.PHONY: remove-vision-services
+remove-vision-services: ## Remove all VisionPilot systemd services
+	@echo "$(BOLD)Removing VisionPilot services...$(RESET)"
+	@-ros2 systemd remove vision-pilot-web 2>/dev/null || true
+	@-ros2 systemd remove vision-pilot-simple 2>/dev/null || true
+	@echo "$(GREEN)VisionPilot services removed$(RESET)"
 
 .DEFAULT_GOAL := help
