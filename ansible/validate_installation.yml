@@ -10,6 +10,20 @@
     onnxruntime_gpu_version: "1.19.0"
 
   tasks:
+    - name: Detect platform (Jetson check)
+      stat:
+        path: /proc/device-tree/model
+      register: jetson_model_file
+
+    - name: Set platform facts
+      set_fact:
+        is_jetson: "{{ jetson_model_file.stat.exists }}"
+        is_ubuntu_x86: "{{ ansible_architecture == 'x86_64' and ansible_distribution == 'Ubuntu' and not jetson_model_file.stat.exists }}"
+        platform_name: "{{ 'Jetson' if jetson_model_file.stat.exists else ('Ubuntu x86_64' if ansible_architecture == 'x86_64' else 'Unknown') }}"
+
+    - name: Display platform info
+      debug:
+        msg: "Validating {{ platform_name }} installation"
     - name: Check CUDA installation
       shell: /usr/local/cuda/bin/nvcc --version | grep release | awk '{print $6}' | sed 's/V//' | cut -d'.' -f1
       register: cuda_major
@@ -104,10 +118,14 @@
       loop: "{{ model_files.results }}"
 
 
+    - name: Set TensorRT binary path
+      set_fact:
+        tensorrt_bin: "{{ '/usr/src/tensorrt/bin/trtexec' if is_jetson else '/usr/bin/trtexec' }}"
+
     - name: Test TensorRT availability (optional)
       shell: |
-        if command -v trtexec >/dev/null 2>&1; then
-            echo "TensorRT available: $(trtexec --help 2>&1 | head -1)"
+        if [ -x {{ tensorrt_bin }} ]; then
+            echo "TensorRT available: $({{ tensorrt_bin }} --help 2>&1 | head -1)"
             ls {{ models_dir }}/*.engine 2>/dev/null | wc -l | xargs echo "TensorRT engines:"
         else
             echo "TensorRT not available"
@@ -123,6 +141,9 @@
           VisionPilot Installation Validation
           ====================================
 
+          Platform: {{ platform_name }}
+          Architecture: {{ ansible_architecture }}
+
           System Checks:
           ✓ CUDA {{ cuda_major.stdout }}.x detected
           ✓ OpenCV {{ opencv_version.stdout }} installed (Ubuntu repo version)
@@ -136,6 +157,7 @@
 
           Environment:
           ✓ All dependencies configured locally
+          {% if is_ubuntu_x86 %}✓ TensorRT libraries installed for Ubuntu x86_64{% endif %}
 
           TensorRT Status:
           {{ tensorrt_check.stdout }}

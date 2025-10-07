@@ -9,7 +9,7 @@
   gather_facts: yes
 
   vars:
-    project_root: "{{ playbook_dir | dirname }}"
+    project_root: "{{ playbook_dir }}/.."
     onnxruntime_dir: "{{ project_root }}/onnxruntime"
 
   tasks:

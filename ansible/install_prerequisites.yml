@@ -1,5 +1,5 @@
 ---
-- name: Install VisionPilot Prerequisites on Jetson Linux (Revised)
+- name: Install VisionPilot Prerequisites (Jetson/Ubuntu 22.04)
   hosts: localhost
   become: yes
   vars:
@@ -7,13 +7,55 @@
     models_dir: "{{ project_root }}/models"
     scripts_dir: "{{ project_root }}/scripts"
     gdown_version: "5.2.0"
+    cuda_version: "12.4"
+    tensorrt_version: "8.6.1"
 
   tasks:
-    - name: Check system information
-      debug:
-        msg: "Installing VisionPilot prerequisites on Jetson Linux 36.3"
+    - name: Detect platform type
+      set_fact:
+        is_jetson: "{{ ansible_architecture == 'aarch64' and ansible_board_name is defined }}"
+        is_ubuntu_x86: "{{ ansible_architecture == 'x86_64' and ansible_distribution == 'Ubuntu' }}"
+      failed_when: false
 
-    - name: Check CUDA installation (with full path)
+    - name: Detect platform (alternative check for Jetson)
+      stat:
+        path: /proc/device-tree/model
+      register: jetson_model_file
+
+    - name: Read Jetson model if available
+      command: cat /proc/device-tree/model
+      register: jetson_model
+      when: jetson_model_file.stat.exists
+      changed_when: false
+      failed_when: false
+
+    - name: Set platform facts
+      set_fact:
+        is_jetson: "{{ jetson_model_file.stat.exists }}"
+        is_ubuntu_x86: "{{ ansible_architecture == 'x86_64' and ansible_distribution == 'Ubuntu' and not jetson_model_file.stat.exists }}"
+        platform_name: "{{ 'Jetson' if jetson_model_file.stat.exists else ('Ubuntu x86_64' if ansible_architecture == 'x86_64' else 'Unknown') }}"
+        jetson_model_name: "{{ jetson_model.stdout | default('N/A') }}"
+
+    - name: Display detected platform
+      debug:
+        msg: |
+          Platform: {{ platform_name }}
+          Architecture: {{ ansible_architecture }}
+          Distribution: {{ ansible_distribution }} {{ ansible_distribution_version }}
+          {% if is_jetson %}Jetson Model: {{ jetson_model_name }}{% endif %}
+
+    - name: Verify supported platform
+      fail:
+        msg: |
+          Unsupported platform detected.
+          This playbook supports:
+          - NVIDIA Jetson (ARM64) with JetPack 6.0+
+          - Ubuntu 22.04 (x86_64) with CUDA-capable GPU
+      when: not (is_jetson or is_ubuntu_x86)
+
+    # ============ CUDA Installation (Platform-specific) ============
+
+    - name: Check if CUDA is already installed
       shell: |
         if [ -x /usr/local/cuda/bin/nvcc ]; then
           /usr/local/cuda/bin/nvcc --version
@@ -28,19 +70,65 @@
       environment:
         PATH: "/usr/local/cuda/bin:{{ ansible_env.PATH }}"
 
-    - name: Verify CUDA is installed
+    - name: Display existing CUDA installation
+      debug:
+        msg: "CUDA already installed: {{ cuda_check.stdout_lines[-1] if cuda_check.rc == 0 else 'Not found' }}"
+
+    # Jetson: Verify CUDA (should be pre-installed)
+    - name: Verify CUDA on Jetson
       fail:
         msg: |
           CUDA is not installed on this Jetson system.
           For Jetson Linux 36.3, CUDA should be installed via NVIDIA SDK Manager.
           Expected location: /usr/local/cuda/bin/nvcc
           Please ensure CUDA is properly installed before running this playbook.
-      when: cuda_check.rc != 0
+      when: is_jetson and cuda_check.rc != 0
 
-    - name: Display CUDA version
+    # Ubuntu x86_64: Install CUDA if not present
+    - name: Add NVIDIA CUDA repository key (Ubuntu)
+      apt_key:
+        url: https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/3bf863cc.pub
+        state: present
+      when: is_ubuntu_x86 and cuda_check.rc != 0
+
+    - name: Add NVIDIA CUDA repository (Ubuntu)
+      apt_repository:
+        repo: "deb https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/ /"
+        state: present
+        filename: cuda
+      when: is_ubuntu_x86 and cuda_check.rc != 0
+
+    - name: Update APT cache after adding CUDA repo
+      apt:
+        update_cache: yes
+      when: is_ubuntu_x86 and cuda_check.rc != 0
+
+    - name: Install CUDA toolkit (Ubuntu)
+      apt:
+        name:
+          - cuda-toolkit-12-4
+          - cuda-drivers
+        state: present
+      when: is_ubuntu_x86 and cuda_check.rc != 0
+      register: cuda_install
+
+    - name: Create CUDA symlink (Ubuntu)
+      file:
+        src: /usr/local/cuda-12.4
+        dest: /usr/local/cuda
+        state: link
+      when: is_ubuntu_x86 and cuda_check.rc != 0
+
+    - name: Verify CUDA installation after install
+      shell: /usr/local/cuda/bin/nvcc --version
+      register: cuda_verify
+      changed_when: false
+      when: is_ubuntu_x86 and cuda_install is changed
+
+    - name: Display CUDA installation result
       debug:
-        msg: "CUDA found: {{ cuda_check.stdout_lines[3] }}"
-      when: cuda_check.rc == 0
+        msg: "CUDA installed: {{ cuda_verify.stdout_lines[-1] }}"
+      when: is_ubuntu_x86 and cuda_install is changed
 
     - name: Create models directory
       file:
@@ -49,27 +137,29 @@
         mode: '0755'
       become: no
 
+    # ============ System Dependencies ============
+
     - name: Create system directories
       file:
         path: /etc/apt/preferences.d
         state: directory
         mode: '0755'
 
-    - name: Copy APT preferences for OpenCV
+    - name: Copy APT preferences for OpenCV (Jetson only)
       copy:
         src: files/opencv-preferences
         dest: /etc/apt/preferences.d/opencv-preferences
         mode: '0644'
         backup: yes
+      when: is_jetson
 
     - name: Update APT cache
       apt:
         update_cache: yes
 
-    - name: Install system dependencies
-      apt:
-        name:
-          - libopencv-dev
+    - name: Set platform-specific package list
+      set_fact:
+        common_packages:
           - build-essential
           - cmake
           - wget
@@ -79,8 +169,35 @@
           - python3-numpy
           - unzip
           - tar
+          - libopencv-dev
+        jetson_packages:
           - nvidia-tensorrt
+        ubuntu_packages:
+          - libnvinfer8
+          - libnvinfer-plugin8
+          - libnvparsers8
+          - libnvonnxparsers8
+          - libnvinfer-dev
+          - libnvinfer-plugin-dev
+          - python3-libnvinfer
+          - python3-libnvinfer-dev
+
+    - name: Install common system dependencies
+      apt:
+        name: "{{ common_packages }}"
         state: present
+
+    - name: Install Jetson-specific packages
+      apt:
+        name: "{{ jetson_packages }}"
+        state: present
+      when: is_jetson
+
+    - name: Install Ubuntu TensorRT packages
+      apt:
+        name: "{{ ubuntu_packages }}"
+        state: present
+      when: is_ubuntu_x86
 
     - name: Verify OpenCV version installed
       shell: dpkg -l | grep libopencv-dev | awk '{print $3}'
@@ -120,11 +237,7 @@
         extra_args: --user
       become: no
 
-    - name: Download ONNX Runtime GPU wheel for Jetson (JetPack 6.0)
-      get_url:
-        url: https://nvidia.box.com/shared/static/6l0u97rj80ifwkk8rqbzj1try89fk26z.whl
-        dest: /tmp/onnxruntime_gpu-1.19.0-cp310-cp310-linux_aarch64.whl
-        mode: '0644'
+    # ============ ONNX Runtime GPU 1.23.0 (Platform-specific) ============
 
     - name: Install ONNX Runtime GPU dependencies (compatible versions)
       pip:
@@ -139,41 +252,66 @@
         extra_args: --user
       become: no
 
-    - name: Install ONNX Runtime GPU from downloaded wheel (without dependencies)
+    - name: Install ONNX Runtime GPU 1.23.0 from PyPI (Jetson)
       pip:
-        name: /tmp/onnxruntime_gpu-1.19.0-cp310-cp310-linux_aarch64.whl
+        name: onnxruntime-gpu==1.23.0
         state: present
         executable: pip3
-        extra_args: --user --no-deps
+        extra_args: --user
+      become: no
+      when: is_jetson
+
+    - name: Install ONNX Runtime GPU 1.23.0 from PyPI (Ubuntu x86_64)
+      pip:
+        name: onnxruntime-gpu==1.23.0
+        state: present
+        executable: pip3
+        extra_args: --user
+      become: no
+      when: is_ubuntu_x86
+
+    - name: Verify ONNX Runtime installation
+      shell: python3 -c "import onnxruntime as ort; print(f'ONNX Runtime {ort.__version__} - Providers: {ort.get_available_providers()}')"
+      register: onnx_verify
+      changed_when: false
       become: no
 
+    - name: Display ONNX Runtime installation
+      debug:
+        msg: "{{ onnx_verify.stdout }}"
 
-    - name: Copy models manifest to models directory
+
+    - name: Copy models setup scripts to models directory
       copy:
-        src: "{{ scripts_dir }}/models_manifest.json"
-        dest: "{{ models_dir }}/models_manifest.json"
-        mode: '0644'
+        src: "{{ item.src }}"
+        dest: "{{ models_dir }}/{{ item.dest }}"
+        mode: "{{ item.mode }}"
       become: no
+      loop:
+        - { src: "{{ project_root }}/models/models_manifest.json", dest: "models_manifest.json", mode: "0644" }
+        - { src: "{{ project_root }}/models/models_setup.sh", dest: "models_setup.sh", mode: "0755" }
 
 
-    - name: Download required ONNX models
-      shell: |
-        cd {{ project_root }}
-        python3 {{ scripts_dir }}/download_models.py --required-only --format onnx_fp32
-      args:
-        creates: "{{ models_dir }}/SceneSeg_FP32.onnx"
-      become: no
+    # ============ TensorRT Configuration (Platform-specific) ============
 
+    - name: Set TensorRT paths based on platform
+      set_fact:
+        tensorrt_bin_path: "{{ '/usr/src/tensorrt/bin' if is_jetson else '/usr/bin' }}"
+        tensorrt_lib_path: "{{ '/usr/lib/aarch64-linux-gnu' if is_jetson else '/usr/lib/x86_64-linux-gnu' }}"
 
-    - name: Check TensorRT installation (using full path)
-      command: /usr/src/tensorrt/bin/trtexec --help
+    - name: Check TensorRT installation
+      command: "{{ tensorrt_bin_path }}/trtexec --help"
       register: tensorrt_check
       failed_when: false
       changed_when: false
 
+    - name: Display TensorRT status
+      debug:
+        msg: "TensorRT: {{ 'Available' if tensorrt_check.rc == 0 else 'Not found' }}"
+
     - name: Add TensorRT bin to PATH for model compilation
       set_fact:
-        tensorrt_path: "/usr/src/tensorrt/bin:{{ ansible_env.PATH }}"
+        tensorrt_path: "{{ tensorrt_bin_path }}:{{ ansible_env.PATH }}"
 
     - name: Ask user about TensorRT compilation
       pause:
@@ -250,10 +388,15 @@
       debug:
         msg:
           - "Prerequisites installation complete!"
+          - "Platform: {{ platform_name }}"
+          - "Architecture: {{ ansible_architecture }}"
           - "Models directory: {{ models_dir }}"
           - "Scripts directory: {{ scripts_dir }}"
+          - "TensorRT binary path: {{ tensorrt_bin_path }}"
           - ""
           - "To use VisionPilot:"
           - "  cd {{ project_root }}"
           - "  python3 scripts/download_models.py --help          # See model download options"
           - "  python3 scripts/compile_tensorrt_engines.py --help # See TensorRT compilation options"
+          - ""
+          - "{% if is_ubuntu_x86 %}NOTE: You may need to reboot for CUDA driver changes to take effect{% endif %}"
