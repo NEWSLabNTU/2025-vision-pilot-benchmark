@@ -1,7 +1,11 @@
 ---
+# Compile ONNX models to TensorRT engines
+# NOTE: The autoware-pov TensorRT backend now supports dynamic batch dimensions
+#       automatically, so no ONNX model patching is required.
+#       The compilation script uses optimization profiles to handle dynamic inputs.
 - name: Compile ONNX models to TensorRT engines
   hosts: localhost
-  become: yes
+  become: no
   vars:
     project_root: "{{ playbook_dir }}/.."
     models_dir: "{{ project_root }}/models"

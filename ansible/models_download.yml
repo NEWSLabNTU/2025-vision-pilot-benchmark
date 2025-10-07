@@ -1,11 +1,10 @@
 ---
-- name: Download VisionPilot models using standalone script
+- name: Download VisionPilot ONNX models
   hosts: localhost
-  become: yes
+  become: no
   vars:
     project_root: "{{ playbook_dir }}/.."
     models_dir: "{{ project_root }}/models"
-    scripts_dir: "{{ project_root }}/scripts"
 
   tasks:
     - name: Ensure models directory exists
@@ -14,34 +13,79 @@
         state: directory
         mode: '0755'
 
+    - name: Check if jq is installed
+      command: which jq
+      register: jq_check
+      failed_when: false
+      changed_when: false
 
-    - name: Copy models manifest
+    - name: Install jq if not present
+      apt:
+        name: jq
+        state: present
+      become: yes
+      when: jq_check.rc != 0
+
+    - name: Check if gdown is installed
+      command: python3 -m pip show gdown
+      register: gdown_check
+      failed_when: false
+      changed_when: false
+
+    - name: Install gdown if not present
+      pip:
+        name: gdown==5.2.0
+        state: present
+        executable: pip3
+        extra_args: --user
+      when: gdown_check.rc != 0
+
+    - name: Check if models_setup.sh exists in models directory
+      stat:
+        path: "{{ models_dir }}/models_setup.sh"
+      register: setup_script_check
+
+    - name: Copy models_setup.sh if not present
       copy:
-        src: ../scripts/models_manifest.json
+        src: "{{ project_root }}/models/models_setup.sh"
+        dest: "{{ models_dir }}/models_setup.sh"
+        mode: '0755'
+      when: not setup_script_check.stat.exists
+
+    - name: Check if models_manifest.json exists in models directory
+      stat:
+        path: "{{ models_dir }}/models_manifest.json"
+      register: manifest_check
+
+    - name: Copy models_manifest.json if not present
+      copy:
+        src: "{{ project_root }}/models/models_manifest.json"
         dest: "{{ models_dir }}/models_manifest.json"
         mode: '0644'
+      when: not manifest_check.stat.exists
 
-    - name: Download all required models
+    - name: Download required ONNX models using models_setup.sh
       shell: |
-        cd {{ project_root }}
-        export VISIONPILOT_MODELS_DIR="{{ models_dir }}"
-        python3 {{ scripts_dir }}/download_models.py --required-only
+        cd {{ models_dir }}
+        bash models_setup.sh
+      args:
+        executable: /bin/bash
       register: download_result
-      become: no
 
     - name: Display download results
       debug:
         msg: "{{ download_result.stdout_lines }}"
 
-    - name: Generate master checksum file
-      shell: |
-        cd {{ models_dir }}
-        if ls *.sha256 >/dev/null 2>&1; then
-          echo "# VisionPilot Models SHA256 Checksums" > master_checksums.sha256
-          echo "# Generated on $(date)" >> master_checksums.sha256
-          echo "" >> master_checksums.sha256
-          cat *.sha256 >> master_checksums.sha256
-          echo "Master checksum file created: master_checksums.sha256"
-        fi
-      args:
-        creates: "{{ models_dir }}/master_checksums.sha256"
+    - name: List downloaded ONNX models
+      find:
+        paths: "{{ models_dir }}"
+        patterns: "*.onnx"
+      register: onnx_files
+
+    - name: Display downloaded models summary
+      debug:
+        msg: |
+          Downloaded {{ onnx_files.files | length }} ONNX model(s):
+          {% for file in onnx_files.files %}
+          - {{ file.path | basename }} ({{ (file.size / 1024 / 1024) | round(1) }} MB)
+          {% endfor %}
