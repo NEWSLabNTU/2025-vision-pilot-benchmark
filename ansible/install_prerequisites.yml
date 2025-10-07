@@ -237,7 +237,7 @@
         extra_args: --user
       become: no
 
-    # ============ ONNX Runtime GPU 1.23.0 (Platform-specific) ============
+    # ============ ONNX Runtime GPU (Platform-specific) ============
 
     - name: Install ONNX Runtime GPU dependencies (compatible versions)
       pip:
@@ -252,18 +252,18 @@
         extra_args: --user
       become: no
 
-    - name: Install ONNX Runtime GPU 1.23.0 from PyPI (Jetson)
+    - name: Install ONNX Runtime GPU from PyPI (Jetson)
       pip:
-        name: onnxruntime-gpu==1.23.0
+        name: onnxruntime-gpu==1.19.0
         state: present
         executable: pip3
         extra_args: --user
       become: no
       when: is_jetson
 
-    - name: Install ONNX Runtime GPU 1.23.0 from PyPI (Ubuntu x86_64)
+    - name: Install ONNX Runtime GPU from PyPI (Ubuntu x86_64)
       pip:
-        name: onnxruntime-gpu==1.23.0
+        name: onnxruntime-gpu==1.19.0
         state: present
         executable: pip3
         extra_args: --user
