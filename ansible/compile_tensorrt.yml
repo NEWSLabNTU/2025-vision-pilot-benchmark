@@ -8,8 +8,19 @@
     scripts_dir: "{{ project_root }}/scripts"
 
   tasks:
+    - name: Detect platform (Jetson check)
+      stat:
+        path: /proc/device-tree/model
+      register: jetson_model_file
+
+    - name: Set platform facts
+      set_fact:
+        is_jetson: "{{ jetson_model_file.stat.exists }}"
+        is_ubuntu_x86: "{{ ansible_architecture == 'x86_64' and ansible_distribution == 'Ubuntu' and not jetson_model_file.stat.exists }}"
+        tensorrt_bin_path: "{{ '/usr/src/tensorrt/bin' if jetson_model_file.stat.exists else '/usr/bin' }}"
+
     - name: Check if TensorRT is available
-      command: trtexec --help
+      command: "{{ tensorrt_bin_path }}/trtexec --help"
       register: tensorrt_check
       failed_when: false
       changed_when: false
@@ -35,6 +46,8 @@
 
     - name: Compile ONNX models to TensorRT engines (FP16)
       command: "python3 {{ scripts_dir }}/compile_tensorrt_engines.py --precision fp16 --models-dir {{ models_dir }}"
+      environment:
+        PATH: "{{ tensorrt_bin_path }}:{{ ansible_env.PATH }}"
       register: compilation_result
       failed_when: false
       become: no

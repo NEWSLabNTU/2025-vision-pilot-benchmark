@@ -26,13 +26,14 @@ def check_tensorrt_tools():
     print("Check if /usr/src/tensorrt/bin/trtexec exists")
     return False
 
-def get_jetson_info():
-    """Get Jetson device information for TensorRT optimization"""
+def get_platform_info():
+    """Get platform information for TensorRT optimization (Jetson or Ubuntu x86_64)"""
+    # Try to detect Jetson
     try:
         with open('/proc/device-tree/model', 'r') as f:
             model = f.read().strip('\x00')
 
-        # Determine compute capability
+        # Determine compute capability for Jetson
         if 'AGX Orin' in model:
             compute_capability = '8.7'
             max_batch_size = 8
@@ -51,17 +52,54 @@ def get_jetson_info():
             max_batch_size = 4
 
         return {
+            'platform': 'Jetson',
             'model': model,
             'compute_capability': compute_capability,
             'max_batch_size': max_batch_size
         }
-    except Exception as e:
-        print(f"Warning: Could not detect Jetson model: {e}")
-        return {
-            'model': 'Unknown Jetson',
-            'compute_capability': '8.7',
-            'max_batch_size': 4
-        }
+    except FileNotFoundError:
+        # Not a Jetson, check for Ubuntu x86_64
+        import platform
+
+        if platform.machine() == 'x86_64':
+            # Detect NVIDIA GPU compute capability via nvidia-smi or default to modern GPU
+            try:
+                result = subprocess.run(['nvidia-smi', '--query-gpu=compute_cap', '--format=csv,noheader'],
+                                      capture_output=True, text=True, timeout=5)
+                if result.returncode == 0:
+                    compute_cap = result.stdout.strip().split('\n')[0]
+                    compute_capability = compute_cap.replace('.', '')
+
+                    # Determine max batch size based on compute capability
+                    if float(compute_cap) >= 8.0:  # Ampere or newer (RTX 30xx, A100, etc.)
+                        max_batch_size = 8
+                    elif float(compute_cap) >= 7.5:  # Turing (RTX 20xx, T4)
+                        max_batch_size = 6
+                    else:  # Older GPUs
+                        max_batch_size = 4
+                else:
+                    # Default for modern GPUs
+                    compute_capability = '8.6'
+                    max_batch_size = 8
+            except (subprocess.TimeoutExpired, FileNotFoundError):
+                # nvidia-smi not available, use defaults
+                compute_capability = '8.6'
+                max_batch_size = 8
+
+            return {
+                'platform': 'Ubuntu x86_64',
+                'model': 'NVIDIA GPU',
+                'compute_capability': compute_capability,
+                'max_batch_size': max_batch_size
+            }
+        else:
+            # Unknown platform
+            return {
+                'platform': 'Unknown',
+                'model': 'Unknown',
+                'compute_capability': '8.6',
+                'max_batch_size': 4
+            }
 
 def compile_onnx_to_engine(onnx_path: Path, engine_path: Path,
                           precision: str = 'fp16',
@@ -129,7 +167,7 @@ def compile_onnx_to_engine(onnx_path: Path, engine_path: Path,
 
 def main():
     parser = argparse.ArgumentParser(description='Compile ONNX models to TensorRT engines')
-    parser.add_argument('--models-dir', default='/opt/visionpilot/models',
+    parser.add_argument('--models-dir', default='models',
                       help='Directory containing ONNX models')
     parser.add_argument('--precision', choices=['fp32', 'fp16', 'int8'], default='fp16',
                       help='TensorRT precision mode')
@@ -152,11 +190,12 @@ def main():
         print(f"ERROR: Models directory not found: {models_dir}")
         sys.exit(1)
 
-    # Get Jetson device info
-    jetson_info = get_jetson_info()
-    print(f"Detected: {jetson_info['model']}")
-    print(f"Compute Capability: {jetson_info['compute_capability']}")
-    print(f"Max Batch Size: {jetson_info['max_batch_size']}")
+    # Get platform info
+    platform_info = get_platform_info()
+    print(f"Platform: {platform_info['platform']}")
+    print(f"Detected: {platform_info['model']}")
+    print(f"Compute Capability: {platform_info['compute_capability']}")
+    print(f"Max Batch Size: {platform_info['max_batch_size']}")
 
     # Find ONNX models
     if args.models:
@@ -198,7 +237,7 @@ def main():
             onnx_path=onnx_path,
             engine_path=engine_path,
             precision=args.precision,
-            max_batch_size=jetson_info['max_batch_size'],
+            max_batch_size=platform_info['max_batch_size'],
             workspace_size=args.workspace
         )
 
