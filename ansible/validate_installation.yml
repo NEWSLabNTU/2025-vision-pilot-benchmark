@@ -7,7 +7,7 @@
     expected_cuda_major: "12"
     project_root: "{{ playbook_dir }}/.."
     models_dir: "{{ project_root }}/models"
-    onnxruntime_gpu_version: "1.19.2"
+    onnxruntime_gpu_version: "1.19.0"
 
   tasks:
     - name: Check CUDA installation
