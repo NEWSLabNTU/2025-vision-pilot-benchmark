@@ -30,3 +30,14 @@ for all segmentation and 3D scene models under **FP16** and **FP32** precision.
 | **domain_seg** | FP32 | 10.35 ± 2.53 | 102.76 ± 26.57 |
 | **scene_3d** | FP32 | 4.23 ± 1.25 | 259.46 ± 84.36 |
 | **scene_seg** | FP32 | 9.71 ± 1.87 | 107.10 ± 22.10 |
+
+## CPU, GPU, Mem Utlization
+
+| Model          | Precision | CPU Utilization | GPU Utilization |     Memory Usage |
+| :------------- | :-------- | --------------: | --------------: | ---------------: |
+| **domain_seg** | FP32      |       43 ~ 47 % |        **99 %** | 0.6 % (~0.38 GB) |
+| **scene_seg**  | FP32      |       42 ~ 49 % |        **99 %** | 0.6 % (~0.38 GB) |
+| **scene_3d**   | FP32      |       44 ~ 46 % |        **99 %** | 0.6 % (~0.38 GB) |
+| **domain_seg** | FP16      |       56 ~ 60 % |        **88 %** | 0.8 % (~0.50 GB) |
+| **scene_seg**  | FP16      |       57 ~ 66 % |        **74 %** | 0.8 % (~0.50 GB) |
+| **scene_3d**   | FP16      |       53 ~ 56 % |        **82 %** | 0.8 % (~0.50 GB) |
