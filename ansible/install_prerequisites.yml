@@ -55,10 +55,24 @@
 
     # ============ CUDA Installation (Platform-specific) ============
 
+    - name: Find CUDA 12.x installation
+      shell: |
+        if [ -d /usr/local/cuda-12.3 ]; then
+          echo "/usr/local/cuda-12.3"
+        elif [ -d /usr/local/cuda-12 ]; then
+          echo "/usr/local/cuda-12"
+        elif [ -d /usr/local/cuda ]; then
+          echo "/usr/local/cuda"
+        else
+          echo "not_found"
+        fi
+      register: cuda_path
+      changed_when: false
+
     - name: Check if CUDA is already installed
       shell: |
-        if [ -x /usr/local/cuda/bin/nvcc ]; then
-          /usr/local/cuda/bin/nvcc --version
+        if [ -x {{ cuda_path.stdout }}/bin/nvcc ]; then
+          {{ cuda_path.stdout }}/bin/nvcc --version
         elif command -v nvcc >/dev/null 2>&1; then
           nvcc --version
         else
@@ -67,12 +81,11 @@
       register: cuda_check
       failed_when: false
       changed_when: false
-      environment:
-        PATH: "/usr/local/cuda/bin:{{ ansible_env.PATH }}"
+      when: cuda_path.stdout != "not_found"
 
     - name: Display existing CUDA installation
       debug:
-        msg: "CUDA already installed: {{ cuda_check.stdout_lines[-1] if cuda_check.rc == 0 else 'Not found' }}"
+        msg: "CUDA already installed at {{ cuda_path.stdout }}: {{ cuda_check.stdout_lines[-1] if cuda_check.rc == 0 else 'Not found' }}"
 
     # Jetson: Verify CUDA (should be pre-installed)
     - name: Verify CUDA on Jetson
@@ -308,63 +321,20 @@
 
     - name: Display TensorRT status
       debug:
-        msg: "TensorRT: {{ 'Available' if tensorrt_check.rc == 0 else 'Not found' }}"
-
-    - name: Add TensorRT bin to PATH for model compilation
-      set_fact:
-        tensorrt_path: "{{ tensorrt_bin_path }}:{{ ansible_env.PATH }}"
-
-    - name: Ask user about TensorRT compilation
-      pause:
-        prompt: |
-
-          TensorRT compilation can significantly improve inference performance (2-4x speedup)
-          but takes 10-15 minutes to compile all models.
-
-          Compile ONNX models to TensorRT engines? [y/N]
-      register: compile_tensorrt_prompt
-      when: tensorrt_check.rc == 0
-
-    - name: Compile ONNX models to TensorRT engines
-      shell: |
-        cd {{ project_root }}
-        export PATH="{{ tensorrt_path }}"
-        python3 {{ scripts_dir }}/compile_tensorrt_engines.py --precision fp16 --models-dir {{ models_dir }}
-      when:
-        - tensorrt_check.rc == 0
-        - compile_tensorrt_prompt.user_input | lower in ['y', 'yes']
-      register: engine_compilation
-      failed_when: false
-      become: no
-
-    - name: List compiled TensorRT engines
-      shell: ls -lh {{ models_dir }}/*.engine 2>/dev/null | wc -l
-      register: engine_count
-      failed_when: false
-      changed_when: false
-      when:
-        - tensorrt_check.rc == 0
-        - compile_tensorrt_prompt.user_input | lower in ['y', 'yes']
-
-    - name: Display TensorRT compilation result
-      debug:
         msg: |
-          {% if tensorrt_check.rc != 0 %}
-          TensorRT not available - ONNX models will run with ONNX Runtime
-          {% elif compile_tensorrt_prompt.user_input | lower not in ['y', 'yes'] %}
-          TensorRT compilation skipped by user - ONNX models will run with ONNX Runtime
-          To compile later: make compile-tensorrt
-          {% elif engine_compilation.rc == 0 %}
-          TensorRT engines compiled successfully ({{ engine_count.stdout | default(0) }} engines created)
+          TensorRT: {{ 'Available' if tensorrt_check.rc == 0 else 'Not found' }}
+          {% if tensorrt_check.rc == 0 %}
+          TensorRT engines will be compiled automatically at runtime on first inference.
+          To compile manually: make compile-tensorrt
           {% else %}
-          TensorRT engine compilation failed - models will fallback to ONNX Runtime
-          Error output: {{ engine_compilation.stderr | default('Unknown error') }}
+          TensorRT not available - models will use ONNX Runtime backend.
           {% endif %}
 
     - name: Verify installations
       shell: |
         echo "=== Installation Summary ==="
-        echo "CUDA Version: $(/usr/local/cuda/bin/nvcc --version | grep release | cut -d' ' -f5,6)"
+        echo "CUDA Version: $({{ cuda_path.stdout }}/bin/nvcc --version | grep release | cut -d' ' -f5,6)"
+        echo "CUDA Path: {{ cuda_path.stdout }}"
         echo "OpenCV Version: $(dpkg -l | grep libopencv-dev | awk '{print $3}')"
         echo "OpenCV Source: $(apt show libopencv-dev 2>/dev/null | grep 'APT-Sources' | head -1)"
         echo "ONNX Runtime GPU: $(python3 -c 'import onnxruntime; print(onnxruntime.get_available_providers())' 2>/dev/null || echo 'Not available')"
@@ -392,12 +362,13 @@
           - "Platform: {{ platform_name }}"
           - "Architecture: {{ ansible_architecture }}"
           - "Models directory: {{ models_dir }}"
-          - "Scripts directory: {{ scripts_dir }}"
-          - "TensorRT binary path: {{ tensorrt_bin_path }}"
           - ""
-          - "To use VisionPilot:"
-          - "  cd {{ project_root }}"
-          - "  python3 scripts/download_models.py --help          # See model download options"
-          - "  python3 scripts/compile_tensorrt_engines.py --help # See TensorRT compilation options"
+          - "Next steps:"
+          - "  make build                    # Build ROS2 packages"
+          - "  make download-test-video      # Download sample test videos"
+          - "  make run-scene-seg VIDEO=...  # Run inference pipeline"
+          - ""
+          - "TensorRT engines will be compiled automatically on first inference."
+          - "To pre-compile manually: make compile-tensorrt"
           - ""
           - "{% if is_ubuntu_x86 %}NOTE: You may need to reboot for CUDA driver changes to take effect{% endif %}"

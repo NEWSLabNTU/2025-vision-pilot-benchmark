@@ -13,11 +13,9 @@
     - models
     - download
 
-- name: Compile TensorRT Engines
-  import_playbook: compile_tensorrt.yml
-  tags:
-    - tensorrt
-    - compile
+# TensorRT compilation removed from default setup workflow
+# Engines are compiled automatically at runtime on first inference
+# To compile manually: make compile-tensorrt (uses compile_tensorrt.yml)
 
 - name: Validate Installation
   import_playbook: validate_installation.yml

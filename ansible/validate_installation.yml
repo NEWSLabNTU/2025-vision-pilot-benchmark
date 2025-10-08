@@ -24,19 +24,35 @@
     - name: Display platform info
       debug:
         msg: "Validating {{ platform_name }} installation"
+    - name: Find CUDA 12.x installation
+      shell: |
+        if [ -d /usr/local/cuda-12.3 ]; then
+          echo "/usr/local/cuda-12.3"
+        elif [ -d /usr/local/cuda-12 ]; then
+          echo "/usr/local/cuda-12"
+        elif [ -d /usr/local/cuda ]; then
+          echo "/usr/local/cuda"
+        else
+          echo "not_found"
+        fi
+      register: cuda_path_detect
+      changed_when: false
+
     - name: Check CUDA installation
-      shell: /usr/local/cuda/bin/nvcc --version | grep release | awk '{print $6}' | sed 's/V//' | cut -d'.' -f1
+      shell: "{{ cuda_path_detect.stdout }}/bin/nvcc --version | grep release | awk '{print $6}' | sed 's/V//' | cut -d'.' -f1"
       register: cuda_major
       changed_when: false
       failed_when: false
+      when: cuda_path_detect.stdout != "not_found"
 
     - name: Validate CUDA version
       assert:
         that:
+          - cuda_path_detect.stdout != "not_found"
           - cuda_major.rc == 0
           - cuda_major.stdout == expected_cuda_major
-        fail_msg: "CUDA {{ expected_cuda_major }}.x required, found {{ cuda_major.stdout | default('none') }}"
-        success_msg: "✓ CUDA {{ cuda_major.stdout }}.x detected"
+        fail_msg: "CUDA {{ expected_cuda_major }}.x required, found {{ cuda_major.stdout | default('none') }} at {{ cuda_path_detect.stdout | default('not found') }}"
+        success_msg: "✓ CUDA {{ cuda_major.stdout }}.x detected at {{ cuda_path_detect.stdout }}"
 
     - name: Check OpenCV installation
       shell: dpkg -l | grep libopencv-dev | awk '{print $3}' | cut -d'+' -f1
@@ -145,7 +161,7 @@
           Architecture: {{ ansible_architecture }}
 
           System Checks:
-          ✓ CUDA {{ cuda_major.stdout }}.x detected
+          ✓ CUDA {{ cuda_major.stdout }}.x detected at {{ cuda_path_detect.stdout }}
           ✓ OpenCV {{ opencv_version.stdout }} installed (Ubuntu repo version)
           ✓ ONNX Runtime GPU {{ onnx_check.stdout.split(',')[0].split(':')[1] }} with CUDA support
           ✓ gdown {{ gdown_check.stdout.split(':')[1] }} installed
