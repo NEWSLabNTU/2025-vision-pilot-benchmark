@@ -113,6 +113,15 @@ make run-depth VIDEO=/path/to/video.mp4                          # Depth estimat
 
 For detailed performance benchmarks on AGX Orin, see [docs/BENCHMARK_RESULTS.md](docs/BENCHMARK_RESULTS.md).
 
+### Pre-compiled Models
+
+Pre-compiled TensorRT engines for AGX Orin 64GB (optimized, ready to use):
+
+- **Download:** [AGX Orin 64G Pre-compiled Models](https://newslabn.csie.ntu.edu.tw/drive/d/s/15KS5zS0saqd5CvLHFfungJMsOitkC3V/x9WpnVsIh3tjeD_TEIRlLMKsaXUfdelS-e76AXV8xpgw)
+- Includes FP16 and FP32 engines for all three models (SceneSeg, DomainSeg, Scene3D)
+- Extract to `models/` directory to skip the 10-15 minute TensorRT compilation step
+- Achieves the performance shown in [docs/BENCHMARK_RESULTS.md](docs/BENCHMARK_RESULTS.md)
+
 ### Run Benchmarks
 
 To run comprehensive performance benchmarks across all model/precision combinations:
