@@ -34,8 +34,7 @@ make stop-vision-services     # Stop all VisionPilot services
 make status-vision-services   # Check service status
 make logs-vision-services SERVICE=vision-pilot-web  # View service logs
 
-# Test videos
-make download-test-video      # Download sample videos to test_videos/
+# Test video available at: video/8358-208052058_tiny.mp4
 ```
 
 ## Important Technical Details
@@ -75,12 +74,10 @@ make download-test-video      # Download sample videos to test_videos/
 ├── scripts/                   # Model download/compilation scripts
 │   ├── download_models.py     # Downloads ONNX models
 │   ├── compile_tensorrt_engines.py  # Compiles TensorRT engines
-│   ├── download_test_video.sh # Downloads test videos using SCRIPT_DIR
-│   ├── setup_systemd_logging.sh  # Systemd logging diagnostics
 │   └── models_manifest.json   # Model metadata
 ├── onnxruntime/               # ONNX Runtime C++ headers and libraries
 │   └── capi_dir/              # Symlink to pip-installed ONNX Runtime
-├── test_videos/               # Downloaded test videos
+├── video/                     # Test videos (see video/README.md for sources)
 └── ansible/                   # Ansible automation
     ├── site.yml              # Master playbook
     ├── install_prerequisites.yml  # Main installation
@@ -98,7 +95,7 @@ make download-test-video      # Download sample videos to test_videos/
 - ✅ Graceful fallback from TensorRT to ONNX Runtime
 - ✅ ROS2 launch package `vision_pilot_launch` with web interface integration
 - ✅ Systemd service management via ros2systemd integration
-- ✅ Test video documentation with free alternatives and academic datasets
+- ✅ Test videos available in `video/` directory (see `video/README.md` for sources)
 - ⚠️ **PENDING**: Systemd user logging requires group membership fix (see Known Issues)
 
 ## Recent Fixes Applied
@@ -109,7 +106,6 @@ make download-test-video      # Download sample videos to test_videos/
 - **PATH configuration**: Fixed TensorRT PATH to use `/usr/src/tensorrt/bin/trtexec`
 - **Launch package creation**: Added `vision_pilot_launch` ROS2 package with XML launch files
 - **Systemd integration**: Added ros2systemd support with Makefile targets for service management
-- **Test video setup**: Fixed download script and documented free video sources in README.md
 - **ONNX Runtime C++ headers**: Fixed missing headers using AAR extraction method
 
 ## Lint/Typecheck Commands
