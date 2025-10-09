@@ -107,9 +107,28 @@ make run-depth VIDEO=/path/to/video.mp4                          # Depth estimat
 └── video/                      # Test videos
 ```
 
-## Performance
+## Performance Benchmarking
 
-For detailed performance benchmarks on AGX Orin, see [models/statistic.md](models/statistic.md).
+### View Results
+
+For detailed performance benchmarks on AGX Orin, see [docs/BENCHMARK_RESULTS.md](docs/BENCHMARK_RESULTS.md).
+
+### Run Benchmarks
+
+To run comprehensive performance benchmarks across all model/precision combinations:
+
+```bash
+# Run full benchmark suite (6 tests: scene_seg/domain_seg/scene_3d × fp16/fp32)
+make benchmark VIDEO=video/8358-208052058.mp4 DURATION=10
+
+# Results saved to: benchmark_results/<timestamp>/benchmark_results.csv
+```
+
+The benchmark script will:
+- Test all 6 model/precision combinations automatically
+- Measure inference FPS, latency, CPU usage, and memory consumption
+- Generate comprehensive CSV results with crash-safe incremental writing
+- Take approximately 60 seconds to complete (10s per test)
 
 ## Advanced Usage
 
