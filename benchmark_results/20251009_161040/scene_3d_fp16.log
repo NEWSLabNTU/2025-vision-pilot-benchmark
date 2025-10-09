@@ -1,0 +1,38 @@
+Oct 09 16:12:43 ubuntu systemd[2692]: Started VisionPilot Web Interface [RMW=cyclonedds, Domain=0].
+Oct 09 16:12:44 ubuntu bash[3187994]: [INFO] [launch]: All log files can be found below /home/jetson/.ros/log/2025-10-09-16-12-44-018042-ubuntu-3187994
+Oct 09 16:12:44 ubuntu bash[3187994]: [INFO] [launch]: Default logging verbosity is set to INFO
+Oct 09 16:12:44 ubuntu bash[3187994]: [INFO] [video_publisher_node_exe-1]: process started with pid [3188003]
+Oct 09 16:12:44 ubuntu bash[3187994]: [INFO] [models_node_exe-2]: process started with pid [3188005]
+Oct 09 16:12:44 ubuntu bash[3187994]: [INFO] [visualize_depth_node_exe-3]: process started with pid [3188007]
+Oct 09 16:12:44 ubuntu bash[3187994]: [INFO] [foxglove_bridge-4]: process started with pid [3188009]
+Oct 09 16:12:44 ubuntu bash[3187994]: [INFO] [web_video_server-5]: process started with pid [3188011]
+Oct 09 16:12:44 ubuntu bash[3187994]: [INFO] [republish-6]: process started with pid [3188013]
+Oct 09 16:12:44 ubuntu bash[3187994]: [INFO] [republish-7]: process started with pid [3188015]
+Oct 09 16:12:44 ubuntu bash[3187994]: [foxglove_bridge-4] [INFO] [1759997564.431411392] [foxglove_bridge]: Load Library: /opt/ros/humble/lib/libfoxglove_bridge_component.so
+Oct 09 16:12:44 ubuntu bash[3187994]: [foxglove_bridge-4] [INFO] [1759997564.451876317] [foxglove_bridge]: Found class: rclcpp_components::NodeFactoryTemplate<foxglove_bridge::FoxgloveBridge>
+Oct 09 16:12:44 ubuntu bash[3187994]: [foxglove_bridge-4] [INFO] [1759997564.451979034] [foxglove_bridge]: Instantiate class: rclcpp_components::NodeFactoryTemplate<foxglove_bridge::FoxgloveBridge>
+Oct 09 16:12:44 ubuntu bash[3187994]: [foxglove_bridge-4] [WARN] [1759997564.452121655] [rcl.logging_rosout]: Publisher already registered for provided node name. If this is due to multiple nodes with the same name then all logs for that logger name will go out over the existing publisher. As soon as any node with that name is destructed it will unregister the publisher, preventing any further logs for that name from being published on the rosout topic.
+Oct 09 16:12:44 ubuntu bash[3187994]: [foxglove_bridge-4] [INFO] [1759997564.463826992] [foxglove_bridge]: Starting foxglove_bridge (humble, 0.8.5@) with WebSocket++/0.8.2
+Oct 09 16:12:44 ubuntu bash[3187994]: [foxglove_bridge-4] [INFO] [1759997564.468710006] [foxglove_bridge]: [WS] Server running without TLS
+Oct 09 16:12:44 ubuntu bash[3187994]: [foxglove_bridge-4] [INFO] [1759997564.470217936] [foxglove_bridge]: [WS] WebSocket server listening at ws://0.0.0.0:8765
+Oct 09 16:12:44 ubuntu bash[3187994]: [foxglove_bridge-4] [INFO] [1759997564.470757474] [foxglove_bridge]: [WS] WebSocket server run loop started
+Oct 09 16:12:44 ubuntu bash[3187994]: [visualize_depth_node_exe-3] [INFO] [1759997564.506158184] [FFMPEGPublisher]: using libav encoder: libx264
+Oct 09 16:12:44 ubuntu bash[3187994]: [models_node_exe-2] [INFO] [1759997564.721466145] [tensorrt_backend]: Found pre-built fp16 engine at /home/jetson/2025-vision-pilot-benchmark/models/Scene3D_FP32.onnx.fp16.engine
+Oct 09 16:12:44 ubuntu bash[3187994]: [web_video_server-5] [INFO] [1759997564.960591555] [web_video_server]: Waiting For connections on 0.0.0.0:8080
+Oct 09 16:12:44 ubuntu bash[3187994]: [video_publisher_node_exe-1] [INFO] [1759997564.961150709] [video_publisher]: Video publisher started. Publishing to: /sensors/video/image_raw
+Oct 09 16:12:44 ubuntu bash[3187994]: [models_node_exe-2] [INFO] [1759997564.977348158] [FFMPEGPublisher]: using libav encoder: libx264
+Oct 09 16:12:44 ubuntu bash[3187994]: [models_node_exe-2] [INFO] [1759997564.985012541] [scene3d_model]: Model runner node configured for model type 'depth'
+Oct 09 16:12:44 ubuntu bash[3187994]: [models_node_exe-2] [INFO] [1759997564.985110906] [scene3d_model]: GPU backend: cuda
+Oct 09 16:12:44 ubuntu bash[3187994]: [models_node_exe-2] [INFO] [1759997564.985125754] [scene3d_model]: Input topic: /sensors/video/image_raw
+Oct 09 16:12:44 ubuntu bash[3187994]: [models_node_exe-2] [INFO] [1759997564.985137018] [scene3d_model]: Output topic: /auto3d/scene_3d/depth_map
+Oct 09 16:12:51 ubuntu bash[3187994]: [models_node_exe-2] [INFO] [1759997571.372768435] [scene3d_model]: Frame 100: Inference Latency: 38.09 ms (26.3 FPS)
+Oct 09 16:12:51 ubuntu bash[3187994]: [visualize_depth_node_exe-3] [INFO] [1759997571.391449885] [scene3d_viz]: Frame 100: Depth Visualization Latency: 9.02 ms (110.8 FPS)
+Oct 09 16:12:55 ubuntu bash[3187994]: [models_node_exe-2] [INFO] [1759997575.639902270] [scene3d_model]: Frame 200: Inference Latency: 33.75 ms (29.6 FPS)
+Oct 09 16:12:55 ubuntu bash[3187994]: [visualize_depth_node_exe-3] [INFO] [1759997575.660080098] [scene3d_viz]: Frame 200: Depth Visualization Latency: 10.39 ms (96.3 FPS)
+Oct 09 16:12:59 ubuntu bash[3187994]: [models_node_exe-2] [INFO] [1759997579.872957121] [scene3d_model]: Frame 300: Inference Latency: 36.09 ms (27.7 FPS)
+Oct 09 16:12:59 ubuntu bash[3187994]: [visualize_depth_node_exe-3] [INFO] [1759997579.891338899] [scene3d_viz]: Frame 300: Depth Visualization Latency: 9.10 ms (109.9 FPS)
+Oct 09 16:13:04 ubuntu bash[3187994]: [models_node_exe-2] [INFO] [1759997584.056626176] [scene3d_model]: Frame 400: Inference Latency: 33.06 ms (30.2 FPS)
+Oct 09 16:13:04 ubuntu bash[3187994]: [visualize_depth_node_exe-3] [INFO] [1759997584.074871541] [scene3d_viz]: Frame 400: Depth Visualization Latency: 8.80 ms (113.7 FPS)
+Oct 09 16:13:04 ubuntu systemd[2692]: Stopping VisionPilot Web Interface [RMW=cyclonedds, Domain=0]...
+Oct 09 16:13:04 ubuntu systemd[2692]: Stopped VisionPilot Web Interface [RMW=cyclonedds, Domain=0].
+Oct 09 16:13:04 ubuntu systemd[2692]: ros2-vision-pilot-web.service: Consumed 1min 34.961s CPU time.

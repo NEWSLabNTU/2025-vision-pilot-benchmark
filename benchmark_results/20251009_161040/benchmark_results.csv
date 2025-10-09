@@ -1,0 +1,15 @@
+# VisionPilot Benchmark Results
+# Timestamp: 2025-10-09 16:10:40.933381
+# Video: /home/jetson/2025-vision-pilot-benchmark/video/8356-208052041.mp4
+# Duration: 10s per test
+# Backend: tensorrt
+#
+pipeline,precision,status,inference_fps,inference_latency_ms,mask_time_ms,mask_fps,viz_latency_ms,viz_fps,cpu_percent,mem_mb
+scene_seg,fp16,SUCCESS,31.275,32.0625,0.79,1265.8227848101264,20.7225,48.525,65.91,579.6265625
+scene_seg,fp32,SUCCESS,18.6,53.86,0.915,1092.8961748633878,25.995,38.45,49.419999999999995,455.2265625
+domain_seg,fp16,SUCCESS,35.225,28.495,0.2425,4123.711340206186,23.435000000000002,42.85000000000001,68.03,570.9203125
+domain_seg,fp32,SUCCESS,18.700000000000003,53.45,0.245,4081.6326530612246,25.145,39.85,48.209999999999994,464.137109375
+scene_3d,fp16,SUCCESS,28.450000000000003,35.2475,,,9.3275,107.675,73.32,653.9359375
+scene_3d,fp32,SUCCESS,19.4,51.55,,,9.165,109.4,60.21999999999999,529.748828125
+#
+# Completed: 6/6 tests
