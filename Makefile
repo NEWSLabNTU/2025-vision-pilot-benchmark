@@ -1,5 +1,6 @@
 # VisionPilot Build System for Jetson Linux 36.3 with ROS2 Humble
 # Variables: VIDEO (video file path), PIPELINE (scene_seg/domain_seg/scene_3d)
+#            BACKEND (tensorrt/onnxruntime), PRECISION (fp16/fp32)
 
 ANSIBLE_DIR := ansible
 ROS_SETUP := /opt/ros/humble/setup.sh
@@ -8,6 +9,13 @@ MODELS_DIR := models
 BUILD_TYPE := Release
 ONNXRUNTIME_ROOTDIR := $(shell pwd)/onnxruntime
 PIPELINE ?= scene_seg
+BACKEND ?= tensorrt
+PRECISION ?= fp32
+
+# Absolute paths
+MODELS_DIR_ABS := $(shell pwd)/$(MODELS_DIR)
+CONFIG_DIR := $(WORKSPACE_DIR)/models/config
+TEMPLATES_DIR := scripts/config_templates
 
 # Convert VIDEO to absolute path
 ifneq ($(VIDEO),)
@@ -47,6 +55,15 @@ test: ## Run basic tests
 	@echo "CUDA: $$(nvcc --version 2>/dev/null | grep release || echo 'Not found')"
 	@echo "OpenCV: $$(dpkg -l | grep libopencv-dev | awk '{print $$3}' || echo 'Not found')"
 	@echo "ONNX Runtime: $$(python3 -c 'import onnxruntime as ort; print(ort.__version__)' 2>/dev/null || echo 'Not found')"
+
+.PHONY: config
+config: ## Generate config files (BACKEND=tensorrt/onnxruntime PRECISION=fp16/fp32)
+	@python3 scripts/generate_configs.py \
+		--backend $(BACKEND) \
+		--precision $(PRECISION) \
+		--models-dir $(MODELS_DIR_ABS) \
+		--output-dir $(CONFIG_DIR) \
+		--templates-dir $(TEMPLATES_DIR)
 
 .PHONY: run-pipeline
 run-pipeline: ## Run pipeline (VIDEO=path PIPELINE=scene_seg/domain_seg/scene_3d)
