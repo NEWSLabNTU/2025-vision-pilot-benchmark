@@ -65,6 +65,11 @@ config: ## Generate config files (BACKEND=tensorrt/onnxruntime PRECISION=fp16/fp
 		--output-dir $(CONFIG_DIR) \
 		--templates-dir $(TEMPLATES_DIR)
 
+.PHONY: benchmark
+benchmark: ## Run benchmark on all models/precisions (VIDEO=path [DURATION=10])
+	@[ "$(VIDEO)" ] || { echo "Usage: make benchmark VIDEO=<path> [DURATION=10]"; exit 1; }
+	@python3 scripts/run_benchmark.py $(VIDEO_ABS) --duration $(or $(DURATION),10)
+
 .PHONY: run-pipeline
 run-pipeline: ## Run pipeline (VIDEO=path PIPELINE=scene_seg/domain_seg/scene_3d)
 	@[ "$(VIDEO)" ] || { echo "Usage: make run-pipeline VIDEO=<path> PIPELINE=<type>"; exit 1; }
