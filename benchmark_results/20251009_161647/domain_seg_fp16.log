@@ -1,0 +1,42 @@
+Oct 09 16:17:50 ubuntu systemd[2692]: Started VisionPilot Web Interface [RMW=cyclonedds, Domain=0].
+Oct 09 16:17:51 ubuntu bash[3190125]: [INFO] [launch]: All log files can be found below /home/jetson/.ros/log/2025-10-09-16-17-51-120820-ubuntu-3190125
+Oct 09 16:17:51 ubuntu bash[3190125]: [INFO] [launch]: Default logging verbosity is set to INFO
+Oct 09 16:17:51 ubuntu bash[3190125]: [INFO] [video_publisher_node_exe-1]: process started with pid [3190135]
+Oct 09 16:17:51 ubuntu bash[3190125]: [INFO] [models_node_exe-2]: process started with pid [3190137]
+Oct 09 16:17:51 ubuntu bash[3190125]: [INFO] [visualize_masks_node_exe-3]: process started with pid [3190139]
+Oct 09 16:17:51 ubuntu bash[3190125]: [INFO] [foxglove_bridge-4]: process started with pid [3190141]
+Oct 09 16:17:51 ubuntu bash[3190125]: [INFO] [web_video_server-5]: process started with pid [3190143]
+Oct 09 16:17:51 ubuntu bash[3190125]: [INFO] [republish-6]: process started with pid [3190145]
+Oct 09 16:17:51 ubuntu bash[3190125]: [INFO] [republish-7]: process started with pid [3190147]
+Oct 09 16:17:51 ubuntu bash[3190125]: [foxglove_bridge-4] [INFO] [1759997871.579163840] [foxglove_bridge]: Load Library: /opt/ros/humble/lib/libfoxglove_bridge_component.so
+Oct 09 16:17:51 ubuntu bash[3190125]: [foxglove_bridge-4] [INFO] [1759997871.589335313] [foxglove_bridge]: Found class: rclcpp_components::NodeFactoryTemplate<foxglove_bridge::FoxgloveBridge>
+Oct 09 16:17:51 ubuntu bash[3190125]: [foxglove_bridge-4] [INFO] [1759997871.589425212] [foxglove_bridge]: Instantiate class: rclcpp_components::NodeFactoryTemplate<foxglove_bridge::FoxgloveBridge>
+Oct 09 16:17:51 ubuntu bash[3190125]: [foxglove_bridge-4] [WARN] [1759997871.589539049] [rcl.logging_rosout]: Publisher already registered for provided node name. If this is due to multiple nodes with the same name then all logs for that logger name will go out over the existing publisher. As soon as any node with that name is destructed it will unregister the publisher, preventing any further logs for that name from being published on the rosout topic.
+Oct 09 16:17:51 ubuntu bash[3190125]: [foxglove_bridge-4] [INFO] [1759997871.608061581] [foxglove_bridge]: Starting foxglove_bridge (humble, 0.8.5@) with WebSocket++/0.8.2
+Oct 09 16:17:51 ubuntu bash[3190125]: [foxglove_bridge-4] [INFO] [1759997871.612812813] [foxglove_bridge]: [WS] Server running without TLS
+Oct 09 16:17:51 ubuntu bash[3190125]: [foxglove_bridge-4] [INFO] [1759997871.613269572] [foxglove_bridge]: [WS] WebSocket server listening at ws://0.0.0.0:8765
+Oct 09 16:17:51 ubuntu bash[3190125]: [foxglove_bridge-4] [INFO] [1759997871.613281318] [foxglove_bridge]: [WS] WebSocket server run loop started
+Oct 09 16:17:51 ubuntu bash[3190125]: [models_node_exe-2] [INFO] [1759997871.902591089] [tensorrt_backend]: Found pre-built fp16 engine at /home/jetson/2025-vision-pilot-benchmark/models/DomainSeg_FP32.onnx.fp16.engine
+Oct 09 16:17:52 ubuntu bash[3190125]: [visualize_masks_node_exe-3] [INFO] [1759997872.123435573] [FFMPEGPublisher]: using libav encoder: libx264
+Oct 09 16:17:52 ubuntu bash[3190125]: [web_video_server-5] [INFO] [1759997872.142699347] [web_video_server]: Waiting For connections on 0.0.0.0:8080
+Oct 09 16:17:52 ubuntu bash[3190125]: [video_publisher_node_exe-1] [INFO] [1759997872.166104934] [video_publisher]: Video publisher started. Publishing to: /sensors/video/image_raw
+Oct 09 16:17:52 ubuntu bash[3190125]: [models_node_exe-2] [INFO] [1759997872.169842955] [FFMPEGPublisher]: using libav encoder: libx264
+Oct 09 16:17:52 ubuntu bash[3190125]: [models_node_exe-2] [INFO] [1759997872.176670374] [domain_seg_model]: Model runner node configured for model type 'segmentation'
+Oct 09 16:17:52 ubuntu bash[3190125]: [models_node_exe-2] [INFO] [1759997872.176769778] [domain_seg_model]: GPU backend: cuda
+Oct 09 16:17:52 ubuntu bash[3190125]: [models_node_exe-2] [INFO] [1759997872.176783892] [domain_seg_model]: Input topic: /sensors/video/image_raw
+Oct 09 16:17:52 ubuntu bash[3190125]: [models_node_exe-2] [INFO] [1759997872.176793397] [domain_seg_model]: Output topic: /autoseg/domain_seg/mask
+Oct 09 16:17:57 ubuntu bash[3190125]: [models_node_exe-2] [INFO] [1759997877.800995941] [domain_seg_model]: Frame 100: Inference Latency: 34.23 ms (29.2 FPS)
+Oct 09 16:17:57 ubuntu bash[3190125]: [models_node_exe-2] [INFO] [1759997877.801632882] [domain_seg_model]: Frame 100: Get mask time: 0.45 ms
+Oct 09 16:17:57 ubuntu bash[3190125]: [visualize_masks_node_exe-3] [INFO] [1759997877.826802011] [domain_seg_viz]: Frame 100: Visualization Latency: 21.41 ms (46.7 FPS)
+Oct 09 16:18:01 ubuntu bash[3190125]: [models_node_exe-2] [INFO] [1759997881.480933010] [domain_seg_model]: Frame 200: Inference Latency: 35.33 ms (28.3 FPS)
+Oct 09 16:18:01 ubuntu bash[3190125]: [models_node_exe-2] [INFO] [1759997881.481444048] [domain_seg_model]: Frame 200: Get mask time: 0.29 ms
+Oct 09 16:18:01 ubuntu bash[3190125]: [visualize_masks_node_exe-3] [INFO] [1759997881.509096486] [domain_seg_viz]: Frame 200: Visualization Latency: 23.94 ms (41.8 FPS)
+Oct 09 16:18:05 ubuntu bash[3190125]: [models_node_exe-2] [INFO] [1759997885.097237730] [domain_seg_model]: Frame 300: Inference Latency: 33.15 ms (30.2 FPS)
+Oct 09 16:18:05 ubuntu bash[3190125]: [models_node_exe-2] [INFO] [1759997885.097582316] [domain_seg_model]: Frame 300: Get mask time: 0.20 ms
+Oct 09 16:18:05 ubuntu bash[3190125]: [visualize_masks_node_exe-3] [INFO] [1759997885.126836164] [domain_seg_viz]: Frame 300: Visualization Latency: 26.89 ms (37.2 FPS)
+Oct 09 16:18:08 ubuntu bash[3190125]: [models_node_exe-2] [INFO] [1759997888.629156394] [domain_seg_model]: Frame 400: Inference Latency: 26.79 ms (37.3 FPS)
+Oct 09 16:18:08 ubuntu bash[3190125]: [models_node_exe-2] [INFO] [1759997888.629549130] [domain_seg_model]: Frame 400: Get mask time: 0.22 ms
+Oct 09 16:18:08 ubuntu bash[3190125]: [visualize_masks_node_exe-3] [INFO] [1759997888.654867177] [domain_seg_viz]: Frame 400: Visualization Latency: 21.85 ms (45.8 FPS)
+Oct 09 16:18:11 ubuntu systemd[2692]: Stopping VisionPilot Web Interface [RMW=cyclonedds, Domain=0]...
+Oct 09 16:18:12 ubuntu systemd[2692]: Stopped VisionPilot Web Interface [RMW=cyclonedds, Domain=0].
+Oct 09 16:18:12 ubuntu systemd[2692]: ros2-vision-pilot-web.service: Consumed 1min 51.906s CPU time.
