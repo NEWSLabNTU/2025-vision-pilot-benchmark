@@ -20,6 +20,22 @@ def generate_config(template_path: Path, output_path: Path, models_dir: Path,
     with open(template_path, 'r') as f:
         content = f.read()
 
+    # For TensorRT with FP16, use .fp16.engine files
+    # For TensorRT with FP32, use .fp32.engine files (fallback to ONNX if not exists)
+    # For ONNX Runtime, always use .onnx files (only FP32 available)
+    if backend == 'tensorrt':
+        if precision == 'fp16':
+            # Replace model paths for TensorRT FP16 engines
+            content = content.replace('/SceneSeg_FP32.onnx', '/SceneSeg_FP32.onnx.fp16.engine')
+            content = content.replace('/DomainSeg_FP32.onnx', '/DomainSeg_FP32.onnx.fp16.engine')
+            content = content.replace('/Scene3D_FP32.onnx', '/Scene3D_FP32.onnx.fp16.engine')
+        else:  # fp32
+            # Replace model paths for TensorRT FP32 engines
+            content = content.replace('/SceneSeg_FP32.onnx', '/SceneSeg_FP32.onnx.fp32.engine')
+            content = content.replace('/DomainSeg_FP32.onnx', '/DomainSeg_FP32.onnx.fp32.engine')
+            content = content.replace('/Scene3D_FP32.onnx', '/Scene3D_FP32.onnx.fp32.engine')
+    # For ONNX Runtime, keep .onnx files (already in template)
+
     # Substitute variables
     content = content.replace('{MODEL_PATH}', str(models_dir))
     content = content.replace('{BACKEND}', backend)

@@ -6,3 +6,4 @@ scene3d_model:
     model_type: "depth"
     input_topic: "/sensors/video/image_raw"
     output_topic: "/auto3d/scene_3d/depth_map"
+    gpu_backend: "cuda"

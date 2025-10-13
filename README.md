@@ -124,20 +124,27 @@ Pre-compiled TensorRT engines for AGX Orin 64GB (optimized, ready to use):
 
 ### Run Benchmarks
 
-To run comprehensive performance benchmarks across all model/precision combinations:
+To run comprehensive performance benchmarks across all backend/model/precision combinations:
 
 ```bash
-# Run full benchmark suite (6 tests: scene_seg/domain_seg/scene_3d × fp16/fp32)
+# Run TensorRT benchmark via Makefile (6 tests)
 make benchmark VIDEO=video/8358-208052058.mp4 DURATION=10
+
+# Run both TensorRT and ONNX Runtime (12 tests - recommended for comparison)
+python3 scripts/run_benchmark.py video/8358-208052058.mp4 --duration 10 --backend both
+
+# Run only ONNX Runtime (6 tests)
+python3 scripts/run_benchmark.py video/8358-208052058.mp4 --duration 10 --backend onnxruntime
 
 # Results saved to: benchmark_results/<timestamp>/benchmark_results.csv
 ```
 
 The benchmark script will:
-- Test all 6 model/precision combinations automatically
+- Test all backend/model/precision combinations automatically
+- Compare TensorRT vs ONNX Runtime performance (when using `--backend both`)
 - Measure inference FPS, latency, CPU usage, and memory consumption
 - Generate comprehensive CSV results with crash-safe incremental writing
-- Take approximately 60 seconds to complete (10s per test)
+- Take approximately 60 seconds for 6 tests or 120 seconds for 12 tests (10s per test)
 
 ## Advanced Usage
 
